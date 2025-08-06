@@ -1,0 +1,218 @@
+<!-- src/app/builder/components/preview-panel/preview-panel.component.html -->
+
+<div class="preview-panel">
+
+  <!-- Header -->
+  <div class="panel-header">
+    <h3>Preview</h3>
+
+    <!-- Preview Controls -->
+    <div class="preview-controls">
+      <mat-button-toggle-group
+        name="deviceType"
+        aria-label="Device Type"
+        [value]="deviceType"
+        (change)="setDeviceType($event.value)">
+        <mat-button-toggle value="mobile" matTooltip="Mobile">
+          <mat-icon>smartphone</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="tablet" matTooltip="Tablet">
+          <mat-icon>tablet_mac</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="desktop" matTooltip="Desktop">
+          <mat-icon>desktop_mac</mat-icon>
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+  </div>
+
+  <!-- Preview Content -->
+  <div class="preview-content">
+
+    <!-- Device Frame -->
+    <div class="device-frame">
+
+      <!-- Device Controls -->
+      <div class="device-controls">
+        <button
+          mat-icon-button
+          matTooltip="Rotate device"
+          (click)="toggleOrientation()"
+          [disabled]="deviceType === 'desktop'">
+          <mat-icon>screen_rotation</mat-icon>
+        </button>
+
+        <button
+          mat-icon-button
+          matTooltip="Toggle grid"
+          [class.active]="showGrid"
+          (click)="toggleGrid()">
+          <mat-icon>grid_on</mat-icon>
+        </button>
+
+        <div class="device-info">
+          {{ getDeviceDimensions().width }} × {{ getDeviceDimensions().height }}
+        </div>
+      </div>
+
+      <!-- Device Preview -->
+      <div class="device-preview" [ngStyle]="getPreviewStyles()">
+        <div class="preview-viewport" [ngStyle]="getPreviewContentStyles()">
+
+          <!-- UI Structure Preview -->
+          <div class="ui-preview" *ngIf="uiStructure">
+            <ng-container
+              [ngTemplateOutlet]="previewElementTemplate"
+              [ngTemplateOutletContext]="{component: uiStructure}">
+            </ng-container>
+          </div>
+
+          <!-- Empty State -->
+          <div class="preview-empty" *ngIf="!uiStructure">
+            <mat-icon>preview</mat-icon>
+            <p>No content to preview</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="preview-actions">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="generateCode()"
+        [disabled]="isGenerating || !currentProject">
+        <mat-spinner diameter="16" *ngIf="isGenerating"></mat-spinner>
+        <mat-icon *ngIf="!isGenerating">code</mat-icon>
+        {{ isGenerating ? 'Generating...' : 'Generate Code' }}
+      </button>
+
+      <button
+        mat-stroked-button
+        *ngIf="generatedCode"
+        (click)="toggleCodeVisibility()">
+        <mat-icon>{{ codeVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+        {{ codeVisible ? 'Hide Code' : 'View Code' }}
+      </button>
+    </div>
+
+    <!-- Generated Code -->
+    <div class="code-section" *ngIf="codeVisible && generatedCode">
+      <div class="code-header">
+        <h4>Generated Flutter Code</h4>
+        <button mat-icon-button (click)="copyCode()" matTooltip="Copy to clipboard">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </div>
+
+      <div class="code-container">
+        <pre class="code-content">{{ generatedCode }}</pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Recursive Preview Element Template -->
+<ng-template #previewElementTemplate let-component="component">
+  <div
+    class="preview-element"
+    [ngClass]="'preview-' + component.type"
+    [ngStyle]="getElementPreviewStyles(component)">
+
+    <!-- Container Elements -->
+    <ng-container *ngIf="component.type === 'container'">
+      <div class="container-preview">
+        <ng-container *ngFor="let child of component.children; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="previewElementTemplate"
+            [ngTemplateOutletContext]="{component: child}">
+          </ng-container>
+        </ng-container>
+        <div class="container-placeholder" *ngIf="!component.children?.length">
+          Container
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Column Elements -->
+    <ng-container *ngIf="component.type === 'column'">
+      <div class="column-preview">
+        <ng-container *ngFor="let child of component.children; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="previewElementTemplate"
+            [ngTemplateOutletContext]="{component: child}">
+          </ng-container>
+        </ng-container>
+        <div class="column-placeholder" *ngIf="!component.children?.length">
+          Column
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Row Elements -->
+    <ng-container *ngIf="component.type === 'row'">
+      <div class="row-preview">
+        <ng-container *ngFor="let child of component.children; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="previewElementTemplate"
+            [ngTemplateOutletContext]="{component: child}">
+          </ng-container>
+        </ng-container>
+        <div class="row-placeholder" *ngIf="!component.children?.length">
+          Row
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Text Elements -->
+    <ng-container *ngIf="component.type === 'text'">
+      <div class="text-preview" [ngStyle]="getTextStyles(component)">
+        {{ getDisplayText(component) }}
+      </div>
+    </ng-container>
+
+    <!-- Button Elements -->
+    <ng-container *ngIf="component.type === 'button'">
+      <button class="button-preview" disabled>
+        {{ getDisplayText(component) }}
+      </button>
+    </ng-container>
+
+    <!-- Icon Elements -->
+    <ng-container *ngIf="component.type === 'icon'">
+      <mat-icon
+        class="icon-preview"
+        [ngStyle]="{
+          'font-size': component.properties.size ? component.properties.size + 'px' : '24px',
+          'color': component.properties.color || '#000000'
+        }">
+        {{ component.properties.icon || 'star' }}
+      </mat-icon>
+    </ng-container>
+
+    <!-- Image Elements -->
+    <ng-container *ngIf="component.type === 'image'">
+      <div class="image-preview">
+        <img
+          [src]="component.properties.source || '/assets/placeholder.png'"
+          [alt]="component.properties.alt || 'Image'"
+          [ngStyle]="{
+            'width': component.properties.width ? component.properties.width + 'px' : '100px',
+            'height': component.properties.height ? component.properties.height + 'px' : '100px',
+            'object-fit': component.properties.fit || 'cover'
+          }">
+      </div>
+    </ng-container>
+
+    <!-- Generic Elements -->
+    <ng-container *ngIf="!['container', 'column', 'row', 'text', 'button', 'icon', 'image'].includes(component.type)">
+      <div class="generic-preview">
+        {{ component.type }}
+      </div>
+    </ng-container>
+
+  </div>
+</ng-template>

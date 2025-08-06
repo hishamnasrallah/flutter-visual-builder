@@ -1,0 +1,124 @@
+<p>widget-toolbox works!</p>
+<!-- src/app/builder/components/widget-toolbox/widget-toolbox.component.html -->
+
+<div class="widget-toolbox">
+  <!-- Header -->
+  <div class="toolbox-header">
+    <h3>Widgets</h3>
+
+    <!-- Search -->
+    <div class="search-container">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          placeholder="Search widgets..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange($event.target?.value || '')"
+          autocomplete="off">
+        <button
+          mat-icon-button
+          matSuffix
+          *ngIf="searchTerm"
+          (click)="clearSearch()"
+          aria-label="Clear search">
+          <mat-icon>clear</mat-icon>
+        </button>
+      </mat-form-field>
+    </div>
+
+    <!-- Group Controls -->
+    <div class="group-controls" *ngIf="!isSearching">
+      <button
+        mat-icon-button
+        matTooltip="Expand all groups"
+        (click)="expandAllGroups()">
+        <mat-icon>expand_more</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        matTooltip="Collapse all groups"
+        (click)="collapseAllGroups()">
+        <mat-icon>expand_less</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading widgets...</p>
+  </div>
+
+  <!-- Widget Groups -->
+  <div class="widget-content" *ngIf="!isLoading">
+
+    <!-- Search Results -->
+    <div class="search-results" *ngIf="isSearching">
+      <div class="results-header">
+        <span class="results-count">{{filteredComponents.length}} results</span>
+        <button mat-stroked-button size="small" (click)="clearSearch()">
+          Show all
+        </button>
+      </div>
+
+      <div class="widget-grid">
+        <div
+          class="widget-item"
+          *ngFor="let component of filteredComponents; trackBy: trackComponent"
+          cdkDrag
+          [cdkDragData]="component"
+          (cdkDragStarted)="onDragStart($event, component)"
+          (cdkDragEnded)="onDragEnd($event)"
+          (dblclick)="onWidgetDoubleClick(component)"
+          [attr.title]="component.description">
+
+          <div class="widget-icon">
+            <mat-icon>{{component.icon}}</mat-icon>
+          </div>
+          <div class="widget-name">{{component.name}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Widget Groups -->
+    <div class="widget-groups" *ngIf="!isSearching">
+      <mat-accordion multi>
+        <mat-expansion-panel
+          *ngFor="let group of widgetGroups; trackBy: trackWidgetGroup"
+          [expanded]="group.expanded"
+          (expandedChange)="group.expanded = $event">
+
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon class="group-icon">widgets</mat-icon>
+              {{group.name}}
+            </mat-panel-title>
+            <mat-panel-description>
+              {{group.components.length}} widgets
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="widget-grid">
+            <div
+              class="widget-item"
+              *ngFor="let component of group.components; trackBy: trackComponent"
+              cdkDrag
+              [cdkDragData]="component"
+              (cdkDragStarted)="onDragStart($event, component)"
+              (cdkDragEnded)="onDragEnd($event)"
+              (dblclick)="onWidgetDoubleClick(component)"
+              [attr.title]="component.description">
+
+              <div class="widget-icon">
+                <mat-icon>{{component.icon}}</mat-icon>
+              </div>
+              <div class="widget-name">{{component.name}}</div>
+            </div>
+          </div>
+
+        </mat-expansion-panel>
+      </mat-accordion>
+    </div>
+  </div>
+</div>

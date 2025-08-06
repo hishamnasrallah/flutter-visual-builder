@@ -1,0 +1,195 @@
+<!-- src/app/builder/components/builder-canvas/builder-canvas.component.html -->
+
+<div class="builder-canvas"
+     (click)="onCanvasClick($event)"
+     cdkDropList
+     [cdkDropListData]="{path: []}"
+     (cdkDropListDropped)="onDrop($event)"
+     (cdkDropListEntered)="onDragEnter($event, [])"
+     (cdkDropListExited)="onDragExit($event)">
+
+  <!-- Canvas Content -->
+  <div class="canvas-content">
+    <ng-container *ngIf="uiStructure">
+      <div class="canvas-root">
+        <ng-container
+          [ngTemplateOutlet]="elementTemplate"
+          [ngTemplateOutletContext]="{component: uiStructure, path: []}">
+        </ng-container>
+      </div>
+    </ng-container>
+
+    <!-- Empty State -->
+    <div class="empty-canvas" *ngIf="!uiStructure || !uiStructure.children?.length">
+      <div class="empty-content">
+        <mat-icon class="empty-icon">widgets</mat-icon>
+        <h3>Start Building Your App</h3>
+        <p>Drag widgets from the toolbox to begin designing your screen</p>
+        <div class="empty-actions">
+          <button mat-stroked-button>
+            <mat-icon>help</mat-icon>
+            View Tutorial
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drop Zone Overlay -->
+  <div class="drop-overlay"
+       *ngIf="draggedElement && isDropTarget"
+       [class.active]="isDropTarget">
+    <div class="drop-indicator">
+      <mat-icon>add</mat-icon>
+      <span>Drop widget here</span>
+    </div>
+  </div>
+</div>
+
+<!-- Recursive Element Template -->
+<ng-template #elementTemplate let-component="component" let-path="path">
+  <div
+    class="canvas-element-wrapper"
+    [ngClass]="getElementClasses(component, path)"
+    [ngStyle]="getElementStyles(component)"
+    (click)="onElementClick(component, path, $event)"
+    (dblclick)="onElementDoubleClick(component, path, $event)"
+    cdkDrag
+    [cdkDragData]="{component: component, path: path}"
+    cdkDropList
+    [cdkDropListData]="{path: path}"
+    (cdkDropListDropped)="onDrop($event, path)"
+    (cdkDropListEntered)="onDragEnter($event, path)"
+    (cdkDropListExited)="onDragExit($event)">
+
+    <!-- Element Controls (visible when selected) -->
+    <div class="element-controls" *ngIf="isElementSelected(path)">
+      <button
+        mat-icon-button
+        class="control-btn duplicate-btn"
+        (click)="onDuplicateElement(path, $event)"
+        matTooltip="Duplicate">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        class="control-btn delete-btn"
+        (click)="onDeleteElement(path, $event)"
+        matTooltip="Delete"
+        *ngIf="path.length > 0">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+
+    <!-- Element Content -->
+    <div class="element-content">
+
+      <!-- Container Elements -->
+      <ng-container *ngIf="component.type === 'container'">
+        <div class="container-content">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <ng-container
+              [ngTemplateOutlet]="elementTemplate"
+              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+            </ng-container>
+          </ng-container>
+
+          <!-- Container placeholder -->
+          <div class="container-placeholder" *ngIf="!component.children?.length">
+            <mat-icon>crop_free</mat-icon>
+            <span>Container</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Column Elements -->
+      <ng-container *ngIf="component.type === 'column'">
+        <div class="column-content">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <ng-container
+              [ngTemplateOutlet]="elementTemplate"
+              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+            </ng-container>
+          </ng-container>
+
+          <!-- Column placeholder -->
+          <div class="column-placeholder" *ngIf="!component.children?.length">
+            <mat-icon>view_column</mat-icon>
+            <span>Column</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Row Elements -->
+      <ng-container *ngIf="component.type === 'row'">
+        <div class="row-content">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <ng-container
+              [ngTemplateOutlet]="elementTemplate"
+              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+            </ng-container>
+          </ng-container>
+
+          <!-- Row placeholder -->
+          <div class="row-placeholder" *ngIf="!component.children?.length">
+            <mat-icon>view_stream</mat-icon>
+            <span>Row</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Text Elements -->
+      <ng-container *ngIf="component.type === 'text'">
+        <div class="text-content"
+             [ngStyle]="{
+               'font-size': component.properties.fontSize ? component.properties.fontSize + 'px' : '16px',
+               'color': component.properties.color || '#000000',
+               'text-align': component.properties.textAlign || 'left',
+               'font-weight': component.properties.fontWeight || 'normal'
+             }">
+          {{ getDisplayText(component) }}
+        </div>
+      </ng-container>
+
+      <!-- Button Elements -->
+      <ng-container *ngIf="component.type === 'button'">
+        <button mat-raised-button class="button-content" disabled>
+          {{ getDisplayText(component) }}
+        </button>
+      </ng-container>
+
+      <!-- Icon Elements -->
+      <ng-container *ngIf="component.type === 'icon'">
+        <mat-icon class="icon-content"
+                  [ngStyle]="{
+                    'font-size': component.properties.size ? component.properties.size + 'px' : '24px',
+                    'color': component.properties.color || '#000000'
+                  }">
+          {{ component.properties.icon || 'star' }}
+        </mat-icon>
+      </ng-container>
+
+      <!-- Image Elements -->
+      <ng-container *ngIf="component.type === 'image'">
+        <div class="image-content">
+          <img [src]="component.properties.source || '/assets/placeholder-image.svg'"
+               [alt]="component.properties.alt || 'Image'"
+               [ngStyle]="{
+                 'width': component.properties.width ? component.properties.width + 'px' : 'auto',
+                 'height': component.properties.height ? component.properties.height + 'px' : 'auto',
+                 'object-fit': component.properties.fit || 'cover'
+               }">
+        </div>
+      </ng-container>
+
+      <!-- Generic placeholder for other elements -->
+      <ng-container *ngIf="!['container', 'column', 'row', 'text', 'button', 'icon', 'image'].includes(component.type)">
+        <div class="generic-placeholder">
+          <mat-icon>widgets</mat-icon>
+          <span>{{ component.type }}</span>
+        </div>
+      </ng-container>
+
+    </div>
+  </div>
+</ng-template>

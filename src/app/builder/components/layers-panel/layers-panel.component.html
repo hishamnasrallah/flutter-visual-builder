@@ -1,0 +1,141 @@
+<!-- src/app/builder/components/layers-panel/layers-panel.component.html -->
+
+<div class="layers-panel">
+
+  <!-- Header -->
+  <div class="panel-header">
+    <h3>Layers</h3>
+
+    <!-- Controls -->
+    <div class="layer-controls">
+      <button
+        mat-icon-button
+        matTooltip="Expand all"
+        (click)="expandAll()">
+        <mat-icon>unfold_more</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        matTooltip="Collapse all"
+        (click)="collapseAll()">
+        <mat-icon>unfold_less</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- No Structure State -->
+  <div class="no-structure" *ngIf="layers.length === 0">
+    <div class="no-structure-content">
+      <mat-icon class="no-structure-icon">layers_clear</mat-icon>
+      <h4>No Elements</h4>
+      <p>Add widgets to the canvas to see the layer structure</p>
+    </div>
+  </div>
+
+  <!-- Layers Tree -->
+  <div class="layers-content" *ngIf="layers.length > 0">
+    <div class="layers-tree">
+
+      <div
+        class="layer-item"
+        *ngFor="let layer of layers; trackBy: trackLayer"
+        [ngClass]="{
+          'selected': layer.isSelected,
+          'root-layer': layer.path.length === 0
+        }"
+        [style.margin-left.px]="layer.level * 20"
+        (click)="onLayerClick(layer, $event)">
+
+        <!-- Expand/Collapse Button -->
+        <button
+          class="expand-button"
+          mat-icon-button
+          size="small"
+          *ngIf="layer.hasChildren"
+          (click)="onToggleExpand(layer, $event)">
+          <mat-icon class="expand-icon" [class.expanded]="layer.expanded">
+            keyboard_arrow_right
+          </mat-icon>
+        </button>
+
+        <!-- Spacer for items without children -->
+        <div class="expand-spacer" *ngIf="!layer.hasChildren"></div>
+
+        <!-- Layer Icon -->
+        <div class="layer-icon">
+          <mat-icon>{{ getLayerIcon(layer.component) }}</mat-icon>
+        </div>
+
+        <!-- Layer Content -->
+        <div class="layer-content">
+          <div class="layer-name">{{ getLayerName(layer.component) }}</div>
+          <div class="layer-description" *ngIf="getLayerDescription(layer.component)">
+            {{ getLayerDescription(layer.component) }}
+          </div>
+        </div>
+
+        <!-- Layer Actions -->
+        <div class="layer-actions" *ngIf="layer.isSelected">
+          <button
+            mat-icon-button
+            class="action-btn visibility-btn"
+            matTooltip="Toggle visibility"
+            (click)="onToggleVisibility(layer, $event)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+
+          <button
+            mat-icon-button
+            class="action-btn duplicate-btn"
+            matTooltip="Duplicate"
+            (click)="onDuplicateLayer(layer, $event)">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+
+          <button
+            mat-icon-button
+            class="action-btn delete-btn"
+            matTooltip="Delete"
+            *ngIf="layer.path.length > 0"
+            (click)="onDeleteLayer(layer, $event)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <!-- Selection Indicator -->
+        <div class="selection-indicator" *ngIf="layer.isSelected"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Layer Information -->
+  <div class="layer-info" *ngIf="selectedElement">
+    <div class="info-header">
+      <mat-icon>info</mat-icon>
+      <span>Selected Element</span>
+    </div>
+
+    <div class="info-content">
+      <div class="info-row">
+        <span class="info-label">Type:</span>
+        <span class="info-value">{{ getTypeName(selectedElement.component.type) }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Path:</span>
+        <span class="info-value path-value">{{ selectedElement.path.join(' → ') || 'Root' }}</span>
+      </div>
+
+      <div class="info-row" *ngIf="selectedElement.component.children">
+        <span class="info-label">Children:</span>
+        <span class="info-value">{{ selectedElement.component.children.length }}</span>
+      </div>
+
+      <div class="info-row" *ngIf="selectedElement.component.properties.text">
+        <span class="info-label">Text:</span>
+        <span class="info-value">{{ selectedElement.component.properties.text }}</span>
+      </div>
+    </div>
+  </div>
+</div>

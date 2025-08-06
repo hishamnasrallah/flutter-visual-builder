@@ -1,0 +1,152 @@
+<!-- src/app/builder/components/properties-panel/properties-panel.component.html -->
+
+<div class="properties-panel">
+
+  <!-- Header -->
+  <div class="panel-header">
+    <h3>Properties</h3>
+  </div>
+
+  <!-- No Selection State -->
+  <div class="no-selection" *ngIf="!selectedElement">
+    <div class="no-selection-content">
+      <mat-icon class="no-selection-icon">tune</mat-icon>
+      <h4>No Element Selected</h4>
+      <p>Select an element on the canvas to edit its properties</p>
+    </div>
+  </div>
+
+  <!-- Properties Form -->
+  <div class="properties-content" *ngIf="selectedElement">
+
+    <!-- Element Info -->
+    <div class="element-info">
+      <div class="element-type">
+        <mat-icon class="element-icon">widgets</mat-icon>
+        <span class="element-name">{{ getElementDisplayName() }}</span>
+      </div>
+
+      <div class="element-actions">
+        <button
+          mat-icon-button
+          matTooltip="Reset to defaults"
+          (click)="resetProperties()">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Properties Form -->
+    <form [formGroup]="propertiesForm" class="properties-form">
+      <div class="property-groups">
+
+        <ng-container *ngFor="let config of propertyConfigs; trackBy: trackPropertyConfig">
+          <div class="property-item">
+
+            <!-- Text Input -->
+            <mat-form-field
+              appearance="outline"
+              class="property-field"
+              *ngIf="config.type === 'text'">
+              <mat-label>{{ config.label }}</mat-label>
+              <input matInput [formControlName]="config.key">
+            </mat-form-field>
+
+            <!-- Textarea -->
+            <mat-form-field
+              appearance="outline"
+              class="property-field"
+              *ngIf="config.type === 'textarea'">
+              <mat-label>{{ config.label }}</mat-label>
+              <textarea matInput [formControlName]="config.key" rows="3"></textarea>
+            </mat-form-field>
+
+            <!-- Number Input -->
+            <mat-form-field
+              appearance="outline"
+              class="property-field"
+              *ngIf="config.type === 'number'">
+              <mat-label>{{ config.label }}</mat-label>
+              <input
+                matInput
+                type="number"
+                [formControlName]="config.key"
+                [min]="config.min"
+                [max]="config.max"
+                [step]="config.step || 1">
+            </mat-form-field>
+
+            <!-- Color Picker -->
+            <div class="property-field color-field" *ngIf="config.type === 'color'">
+              <label class="property-label">{{ config.label }}</label>
+              <div class="color-input-wrapper">
+                <input
+                  type="color"
+                  [formControlName]="config.key"
+                  class="color-input">
+                <mat-form-field appearance="outline" class="color-text-field">
+                  <input matInput [formControlName]="config.key" placeholder="#000000">
+                </mat-form-field>
+              </div>
+            </div>
+
+            <!-- Select Dropdown -->
+            <mat-form-field
+              appearance="outline"
+              class="property-field"
+              *ngIf="config.type === 'select'">
+              <mat-label>{{ config.label }}</mat-label>
+              <mat-select [formControlName]="config.key">
+                <mat-option
+                  *ngFor="let option of config.options"
+                  [value]="option.value">
+                  {{ option.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Boolean Checkbox -->
+            <div class="property-field checkbox-field" *ngIf="config.type === 'boolean'">
+              <mat-checkbox [formControlName]="config.key">
+                {{ config.label }}
+              </mat-checkbox>
+            </div>
+
+            <!-- Slider -->
+            <div class="property-field slider-field" *ngIf="config.type === 'slider'">
+              <label class="property-label">{{ config.label }}</label>
+              <div class="slider-wrapper">
+                <mat-slider
+                  [min]="config.min || 0"
+                  [max]="config.max || 100"
+                  [step]="config.step || 1"
+                  [displayWith]="formatSliderValue"
+                  class="property-slider">
+                  <input matSliderThumb [formControlName]="config.key">
+                </mat-slider>
+                <div class="slider-value">
+                  {{ propertiesForm.get(config.key)?.value || 0 }}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </ng-container>
+
+        <!-- No properties message -->
+        <div class="no-properties" *ngIf="propertyConfigs.length === 0">
+          <mat-icon>info</mat-icon>
+          <p>This element has no editable properties</p>
+        </div>
+
+      </div>
+    </form>
+
+    <!-- Element Path (Debug Info) -->
+    <div class="element-path" *ngIf="selectedElement">
+      <small class="path-label">Path:</small>
+      <code class="path-value">{{ selectedElement.path.join(' > ') || 'Root' }}</code>
+    </div>
+
+  </div>
+</div>
