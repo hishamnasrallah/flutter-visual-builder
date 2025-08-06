@@ -1,390 +1,401 @@
-<!-- src/app/app.component.html -->
+<!-- src/app/app.component.html - Simplified Layout -->
 <div class="app-container" *ngIf="isHandset$ | async as isHandset">
-  <!-- Main Toolbar -->
-  <mat-toolbar class="main-toolbar" color="primary" *ngIf="showMainToolbar">
-    <button
-      type="button"
-      aria-label="Toggle sidenav"
-      mat-icon-button
-      (click)="drawer?.toggle()"
-      *ngIf="isHandset">
-      <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
-    </button>
 
-    <!-- App Title & Project Info -->
-    <div class="toolbar-title">
-      <span class="app-title">{{ title | translate }}</span>
-      <span class="project-info" *ngIf="currentProject">
-        - {{ currentProject.name }}
-        <span class="screen-info" *ngIf="currentScreen">
-          / {{ getCurrentScreenName() }}
-        </span>
-      </span>
-    </div>
-
-    <div class="toolbar-spacer"></div>
-
-    <!-- Main Actions -->
-    <div class="main-actions" *ngIf="isAuthenticated">
-      <!-- Undo/Redo -->
-      <button
-        mat-icon-button
-        [matTooltip]="'undo' | translate"
-        matTooltipPosition="below"
-        [disabled]="!canUndo()"
-        (click)="onUndo()">
-        <mat-icon>undo</mat-icon>
-      </button>
-      <button
-        mat-icon-button
-        [matTooltip]="'redo' | translate"
-        matTooltipPosition="below"
-        [disabled]="!canRedo()"
-        (click)="onRedo()">
-        <mat-icon>redo</mat-icon>
-      </button>
-
-      <mat-divider [vertical]="true" class="toolbar-divider"></mat-divider>
-
-      <!-- Save -->
-      <button
-        mat-raised-button
-        color="accent"
-        (click)="onSave()"
-        [disabled]="!currentScreen">
-        <mat-icon>save</mat-icon>
-        {{ 'save' | translate }}
-      </button>
-
-      <!-- More Actions Menu -->
-      <button mat-icon-button [matMenuTriggerFor]="actionsMenu">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <mat-menu #actionsMenu="matMenu">
-        <button mat-menu-item (click)="onClearCanvas()">
-          <mat-icon>clear</mat-icon>
-          <span>{{ 'clear_canvas' | translate }}</span>
-        </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="onGenerateCode()">
-          <mat-icon>code</mat-icon>
-          <span>{{ 'generate_code' | translate }}</span>
-        </button>
-        <button mat-menu-item (click)="onDownloadProject()">
-          <mat-icon>download</mat-icon>
-          <span>{{ 'download_project' | translate }}</span>
-        </button>
-        <button mat-menu-item (click)="onBuildAPK()">
-          <mat-icon>build</mat-icon>
-          <span>{{ 'build_apk' | translate }}</span>
-        </button>
-      </mat-menu>
-
-      <!-- Panel Toggles -->
-      <div class="panel-toggles" *ngIf="!isHandset">
-        <button
-          mat-icon-button
-          matTooltip="Toggle Layers Panel"
-          [class.active]="showLayersPanel"
-          (click)="toggleLayersPanel()">
-          <mat-icon>layers</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          matTooltip="Toggle Properties Panel"
-          [class.active]="showPropertiesPanel"
-          (click)="togglePropertiesPanel()">
-          <mat-icon>tune</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          matTooltip="Toggle Preview Panel"
-          [class.active]="showPreviewPanel"
-          (click)="togglePreviewPanel()">
-          <mat-icon>preview</mat-icon>
-        </button>
-      </div>
-    </div>
-
-    <!-- Language Selector & User Menu -->
-    <div class="header-actions">
-      <!-- Language Selector -->
-      <div class="language-selector">
-        <button mat-icon-button
-                [matMenuTriggerFor]="languageMenuRef"
-                class="language-btn"
-                [matTooltip]="'change_language' | translate"
-                matTooltipPosition="below">
-          <mat-icon>language</mat-icon>
-          <span class="language-indicator">{{ currentLanguage.toUpperCase() }}</span>
-        </button>
-
-        <mat-menu #languageMenuRef="matMenu" class="language-dropdown">
-          <div class="language-menu-header">
-            <mat-icon>translate</mat-icon>
-            <span>{{ 'select_language' | translate }}</span>
-          </div>
-
-          <div class="language-list">
-            <button mat-menu-item
-                    *ngFor="let lang of availableLanguages"
-                    (click)="changeLanguage(lang)"
-                    class="language-item"
-                    [class.active]="currentLanguage === lang.code">
-              <div class="language-content">
-                <span class="language-flag">{{ lang.flag }}</span>
-                <div class="language-details">
-                  <span class="language-name">{{ lang.name }}</span>
-                  <span class="language-native">{{ lang.nativeName }}</span>
-                </div>
-                <mat-icon *ngIf="currentLanguage === lang.code" class="check-icon">check</mat-icon>
-              </div>
-            </button>
-          </div>
-        </mat-menu>
-      </div>
-
-      <!-- User Menu -->
-      <div class="user-menu" *ngIf="isAuthenticated">
-        <button mat-icon-button
-                [matMenuTriggerFor]="userMenuRef"
-                class="user-menu-trigger"
-                matTooltip="User Menu"
-                matTooltipPosition="below">
-          <div class="user-avatar">
-            <mat-icon>account_circle</mat-icon>
-          </div>
-        </button>
-
-        <mat-menu #userMenuRef="matMenu" class="user-dropdown">
-          <div class="user-profile-section">
-            <div class="user-avatar-large">
-              <mat-icon>account_circle</mat-icon>
-            </div>
-            <div class="user-info">
-              <span class="user-name">{{ getUserDisplayName() }}</span>
-              <span class="user-email">{{ currentUser?.email || 'user@example.com' }}</span>
-            </div>
-          </div>
-
-          <mat-divider></mat-divider>
-
-          <button mat-menu-item class="profile-item">
-            <mat-icon>person_outline</mat-icon>
-            <span>{{ 'profile' | translate }}</span>
-          </button>
-
-          <button mat-menu-item class="settings-item">
-            <mat-icon>settings</mat-icon>
-            <span>{{ 'settings' | translate }}</span>
-          </button>
-
-          <mat-divider></mat-divider>
-
-          <button mat-menu-item (click)="logout()" class="logout-item">
-            <mat-icon>logout</mat-icon>
-            <span>{{ 'logout' | translate }}</span>
-          </button>
-        </mat-menu>
-      </div>
-
-      <!-- Config Button for non-authenticated -->
-      <button mat-icon-button
-              *ngIf="!isAuthenticated && showConfigButton"
-              (click)="goToConfig()"
-              class="config-btn"
-              matTooltip="Configuration"
-              matTooltipPosition="below">
-        <mat-icon>settings</mat-icon>
-      </button>
-
-      <!-- Login Button for non-authenticated -->
-      <button mat-raised-button
-              *ngIf="!isAuthenticated && showConfigButton"
-              (click)="goToLogin()"
-              class="login-btn"
-              color="accent">
-        <mat-icon>login</mat-icon>
-        {{ 'sign_in' | translate }}
-      </button>
-    </div>
-  </mat-toolbar>
-
-  <!-- Router Outlet for pages that don't need the main layout -->
+  <!-- SPECIAL ROUTES: Config and Login pages -->
   <router-outlet *ngIf="!showMainToolbar"></router-outlet>
 
-  <!-- Main Layout for authenticated builder -->
-  <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset" *ngIf="showMainToolbar">
+  <!-- MAIN APP LAYOUT: For authenticated builder -->
+  <div *ngIf="showMainToolbar" class="main-app-layout">
 
-    <!-- Mobile Drawer -->
-    <mat-sidenav
-      #drawer
-      class="sidenav"
-      fixedInViewport
-      [attr.role]="isHandset ? 'dialog' : 'navigation'"
-      [mode]="isHandset ? 'over' : 'side'"
-      [opened]="!isHandset && isAuthenticated">
+    <!-- Main Toolbar -->
+    <mat-toolbar class="main-toolbar" color="primary">
+      <button
+        type="button"
+        aria-label="Toggle sidenav"
+        mat-icon-button
+        (click)="drawer?.toggle()"
+        *ngIf="isHandset">
+        <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+      </button>
 
-      <!-- Widget Toolbox -->
-      <div class="drawer-content" *ngIf="isAuthenticated">
-        <app-widget-toolbox></app-widget-toolbox>
+      <!-- App Title & Project Info -->
+      <div class="toolbar-title">
+        <span class="app-title">{{ title | translate }}</span>
+        <span class="project-info" *ngIf="currentProject">
+          - {{ currentProject.name }}
+          <span class="screen-info" *ngIf="currentScreen">
+            / {{ getCurrentScreenName() }}
+          </span>
+        </span>
       </div>
-    </mat-sidenav>
 
-    <!-- Main Content -->
-    <mat-sidenav-content class="main-content">
+      <div class="toolbar-spacer"></div>
 
-      <!-- Show builder only when authenticated -->
-      <div class="desktop-layout" *ngIf="!isHandset && isAuthenticated">
+      <!-- Main Actions -->
+      <div class="main-actions" *ngIf="isAuthenticated">
+        <!-- Undo/Redo -->
+        <button
+          mat-icon-button
+          [matTooltip]="'undo' | translate"
+          matTooltipPosition="below"
+          [disabled]="!canUndo()"
+          (click)="onUndo()">
+          <mat-icon>undo</mat-icon>
+        </button>
+        <button
+          mat-icon-button
+          [matTooltip]="'redo' | translate"
+          matTooltipPosition="below"
+          [disabled]="!canRedo()"
+          (click)="onRedo()">
+          <mat-icon>redo</mat-icon>
+        </button>
 
-        <!-- Left Sidebar (Widget Toolbox) -->
-        <div class="left-sidebar" [class.collapsed]="!drawer?.opened">
+        <mat-divider [vertical]="true" class="toolbar-divider"></mat-divider>
+
+        <!-- Save -->
+        <button
+          mat-raised-button
+          color="accent"
+          (click)="onSave()"
+          [disabled]="!currentScreen">
+          <mat-icon>save</mat-icon>
+          {{ 'save' | translate }}
+        </button>
+
+        <!-- More Actions Menu -->
+        <button mat-icon-button [matMenuTriggerFor]="actionsMenu">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #actionsMenu="matMenu">
+          <button mat-menu-item (click)="onClearCanvas()">
+            <mat-icon>clear</mat-icon>
+            <span>{{ 'clear_canvas' | translate }}</span>
+          </button>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="onGenerateCode()">
+            <mat-icon>code</mat-icon>
+            <span>{{ 'generate_code' | translate }}</span>
+          </button>
+          <button mat-menu-item (click)="onDownloadProject()">
+            <mat-icon>download</mat-icon>
+            <span>{{ 'download_project' | translate }}</span>
+          </button>
+          <button mat-menu-item (click)="onBuildAPK()">
+            <mat-icon>build</mat-icon>
+            <span>{{ 'build_apk' | translate }}</span>
+          </button>
+        </mat-menu>
+
+        <!-- Panel Toggles -->
+        <div class="panel-toggles" *ngIf="!isHandset">
+          <button
+            mat-icon-button
+            matTooltip="Toggle Layers Panel"
+            [class.active]="showLayersPanel"
+            (click)="toggleLayersPanel()">
+            <mat-icon>layers</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            matTooltip="Toggle Properties Panel"
+            [class.active]="showPropertiesPanel"
+            (click)="togglePropertiesPanel()">
+            <mat-icon>tune</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            matTooltip="Toggle Preview Panel"
+            [class.active]="showPreviewPanel"
+            (click)="togglePreviewPanel()">
+            <mat-icon>preview</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Language Selector & User Menu -->
+      <div class="header-actions">
+        <!-- Language Selector -->
+        <div class="language-selector">
+          <button mat-icon-button
+                  [matMenuTriggerFor]="languageMenuRef"
+                  class="language-btn"
+                  [matTooltip]="'change_language' | translate"
+                  matTooltipPosition="below">
+            <mat-icon>language</mat-icon>
+            <span class="language-indicator">{{ currentLanguage.toUpperCase() }}</span>
+          </button>
+
+          <mat-menu #languageMenuRef="matMenu" class="language-dropdown">
+            <div class="language-menu-header">
+              <mat-icon>translate</mat-icon>
+              <span>{{ 'select_language' | translate }}</span>
+            </div>
+
+            <div class="language-list">
+              <button mat-menu-item
+                      *ngFor="let lang of availableLanguages"
+                      (click)="changeLanguage(lang)"
+                      class="language-item"
+                      [class.active]="currentLanguage === lang.code">
+                <div class="language-content">
+                  <span class="language-flag">{{ lang.flag }}</span>
+                  <div class="language-details">
+                    <span class="language-name">{{ lang.name }}</span>
+                    <span class="language-native">{{ lang.nativeName }}</span>
+                  </div>
+                  <mat-icon *ngIf="currentLanguage === lang.code" class="check-icon">check</mat-icon>
+                </div>
+              </button>
+            </div>
+          </mat-menu>
+        </div>
+
+        <!-- User Menu -->
+        <div class="user-menu" *ngIf="isAuthenticated">
+          <button mat-icon-button
+                  [matMenuTriggerFor]="userMenuRef"
+                  class="user-menu-trigger"
+                  matTooltip="User Menu"
+                  matTooltipPosition="below">
+            <div class="user-avatar">
+              <mat-icon>account_circle</mat-icon>
+            </div>
+          </button>
+
+          <mat-menu #userMenuRef="matMenu" class="user-dropdown">
+            <div class="user-profile-section">
+              <div class="user-avatar-large">
+                <mat-icon>account_circle</mat-icon>
+              </div>
+              <div class="user-info">
+                <span class="user-name">{{ getUserDisplayName() }}</span>
+                <span class="user-email">{{ currentUser?.email || 'user@example.com' }}</span>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <button mat-menu-item class="profile-item">
+              <mat-icon>person_outline</mat-icon>
+              <span>{{ 'profile' | translate }}</span>
+            </button>
+
+            <button mat-menu-item class="settings-item">
+              <mat-icon>settings</mat-icon>
+              <span>{{ 'settings' | translate }}</span>
+            </button>
+
+            <mat-divider></mat-divider>
+
+            <button mat-menu-item (click)="logout()" class="logout-item">
+              <mat-icon>logout</mat-icon>
+              <span>{{ 'logout' | translate }}</span>
+            </button>
+          </mat-menu>
+        </div>
+
+        <!-- Config Button for non-authenticated -->
+        <button mat-icon-button
+                *ngIf="!isAuthenticated && showConfigButton"
+                (click)="goToConfig()"
+                class="config-btn"
+                matTooltip="Configuration"
+                matTooltipPosition="below">
+          <mat-icon>settings</mat-icon>
+        </button>
+
+        <!-- Login Button for non-authenticated -->
+        <button mat-raised-button
+                *ngIf="!isAuthenticated && showConfigButton"
+                (click)="goToLogin()"
+                class="login-btn"
+                color="accent">
+          <mat-icon>login</mat-icon>
+          {{ 'sign_in' | translate }}
+        </button>
+      </div>
+    </mat-toolbar>
+
+    <!-- Main Content Area -->
+    <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset">
+
+      <!-- Mobile Drawer -->
+      <mat-sidenav
+        #drawer
+        class="sidenav"
+        fixedInViewport
+        [attr.role]="isHandset ? 'dialog' : 'navigation'"
+        [mode]="isHandset ? 'over' : 'side'"
+        [opened]="!isHandset && isAuthenticated">
+
+        <!-- Widget Toolbox -->
+        <div class="drawer-content" *ngIf="isAuthenticated">
           <app-widget-toolbox></app-widget-toolbox>
         </div>
+      </mat-sidenav>
 
-        <!-- Center Area -->
-        <div class="center-area">
+      <!-- Main Content -->
+      <mat-sidenav-content class="main-content">
 
-          <!-- Secondary Toolbar -->
-          <div class="secondary-toolbar" *ngIf="currentProject">
+        <!-- AUTHENTICATED USER: Show builder interface -->
+        <div class="builder-interface" *ngIf="isAuthenticated">
 
-            <!-- Screen Selector -->
-            <div class="screen-selector">
-              <mat-form-field appearance="outline" class="screen-select">
-                <mat-label>{{ 'current_screen' | translate }}</mat-label>
-                <mat-select
-                  [value]="currentScreen?.id"
-                  (selectionChange)="onScreenSelectionChange($event.value)">
-                  <mat-option
-                    *ngFor="let screen of projectScreens"
-                    [value]="screen.id">
-                    {{ screen.name }} {{ screen.is_home ? '(Home)' : '' }}
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
+          <!-- Desktop Layout -->
+          <div class="desktop-layout" *ngIf="!isHandset">
+
+            <!-- Left Sidebar (Widget Toolbox) -->
+            <div class="left-sidebar" [class.collapsed]="!drawer?.opened">
+              <app-widget-toolbox></app-widget-toolbox>
             </div>
 
-            <!-- Canvas Controls -->
-            <div class="canvas-controls">
-              <mat-button-toggle-group name="viewMode" aria-label="View Mode">
-                <mat-button-toggle value="design">Design</mat-button-toggle>
-                <mat-button-toggle value="preview" [disabled]="true">Preview</mat-button-toggle>
-              </mat-button-toggle-group>
+            <!-- Center Area -->
+            <div class="center-area">
+
+              <!-- Secondary Toolbar -->
+              <div class="secondary-toolbar" *ngIf="currentProject">
+
+                <!-- Screen Selector -->
+                <div class="screen-selector">
+                  <mat-form-field appearance="outline" class="screen-select">
+                    <mat-label>{{ 'current_screen' | translate }}</mat-label>
+                    <mat-select
+                      [value]="currentScreen?.id"
+                      (selectionChange)="onScreenSelectionChange($event.value)">
+                      <mat-option
+                        *ngFor="let screen of projectScreens"
+                        [value]="screen.id">
+                        {{ screen.name }} {{ screen.is_home ? '(Home)' : '' }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <!-- Canvas Controls -->
+                <div class="canvas-controls">
+                  <mat-button-toggle-group name="viewMode" aria-label="View Mode">
+                    <mat-button-toggle value="design">Design</mat-button-toggle>
+                    <mat-button-toggle value="preview" [disabled]="true">Preview</mat-button-toggle>
+                  </mat-button-toggle-group>
+                </div>
+
+                <!-- Zoom Controls -->
+                <div class="zoom-controls">
+                  <button mat-icon-button [matTooltip]="'zoom_out' | translate">
+                    <mat-icon>zoom_out</mat-icon>
+                  </button>
+                  <span class="zoom-level">100%</span>
+                  <button mat-icon-button [matTooltip]="'zoom_in' | translate">
+                    <mat-icon>zoom_in</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Canvas Area -->
+              <div class="canvas-area">
+                <app-builder-canvas></app-builder-canvas>
+              </div>
             </div>
 
-            <!-- Zoom Controls -->
-            <div class="zoom-controls">
-              <button mat-icon-button [matTooltip]="'zoom_out' | translate">
-                <mat-icon>zoom_out</mat-icon>
-              </button>
-              <span class="zoom-level">100%</span>
-              <button mat-icon-button [matTooltip]="'zoom_in' | translate">
-                <mat-icon>zoom_in</mat-icon>
-              </button>
+            <!-- Right Sidebar -->
+            <div class="right-sidebar">
+
+              <!-- Tabbed Panels -->
+              <mat-tab-group class="panels-tabs" dynamicHeight>
+
+                <!-- Properties Panel -->
+                <mat-tab *ngIf="showPropertiesPanel">
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">tune</mat-icon>
+                    {{ 'properties' | translate }}
+                  </ng-template>
+                  <div class="tab-content">
+                    <app-properties-panel></app-properties-panel>
+                  </div>
+                </mat-tab>
+
+                <!-- Layers Panel -->
+                <mat-tab *ngIf="showLayersPanel">
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">layers</mat-icon>
+                    {{ 'layers' | translate }}
+                  </ng-template>
+                  <div class="tab-content">
+                    <app-layers-panel></app-layers-panel>
+                  </div>
+                </mat-tab>
+
+                <!-- Preview Panel -->
+                <mat-tab *ngIf="showPreviewPanel">
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">preview</mat-icon>
+                    {{ 'preview' | translate }}
+                  </ng-template>
+                  <div class="tab-content">
+                    <app-preview-panel></app-preview-panel>
+                  </div>
+                </mat-tab>
+
+              </mat-tab-group>
             </div>
           </div>
 
-          <!-- Canvas Area -->
-          <div class="canvas-area">
-            <app-builder-canvas></app-builder-canvas>
-          </div>
-        </div>
+          <!-- Mobile Layout -->
+          <div class="mobile-layout" *ngIf="isHandset">
+            <div class="mobile-canvas">
+              <app-builder-canvas></app-builder-canvas>
+            </div>
 
-        <!-- Right Sidebar -->
-        <div class="right-sidebar">
-
-          <!-- Tabbed Panels -->
-          <mat-tab-group class="panels-tabs" dynamicHeight>
-
-            <!-- Properties Panel -->
-            <mat-tab *ngIf="showPropertiesPanel">
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">tune</mat-icon>
-                {{ 'properties' | translate }}
-              </ng-template>
-              <div class="tab-content">
+            <!-- Mobile Bottom Tabs -->
+            <mat-tab-group class="mobile-tabs">
+              <mat-tab>
+                <ng-template mat-tab-label>
+                  <mat-icon>tune</mat-icon>
+                </ng-template>
                 <app-properties-panel></app-properties-panel>
-              </div>
-            </mat-tab>
-
-            <!-- Layers Panel -->
-            <mat-tab *ngIf="showLayersPanel">
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">layers</mat-icon>
-                {{ 'layers' | translate }}
-              </ng-template>
-              <div class="tab-content">
+              </mat-tab>
+              <mat-tab>
+                <ng-template mat-tab-label>
+                  <mat-icon>layers</mat-icon>
+                </ng-template>
                 <app-layers-panel></app-layers-panel>
-              </div>
-            </mat-tab>
-
-            <!-- Preview Panel -->
-            <mat-tab *ngIf="showPreviewPanel">
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">preview</mat-icon>
-                {{ 'preview' | translate }}
-              </ng-template>
-              <div class="tab-content">
+              </mat-tab>
+              <mat-tab>
+                <ng-template mat-tab-label>
+                  <mat-icon>preview</mat-icon>
+                </ng-template>
                 <app-preview-panel></app-preview-panel>
-              </div>
-            </mat-tab>
-
-          </mat-tab-group>
-        </div>
-      </div>
-
-      <!-- Mobile Layout -->
-      <div class="mobile-layout" *ngIf="isHandset && isAuthenticated">
-        <div class="mobile-canvas">
-          <app-builder-canvas></app-builder-canvas>
-        </div>
-
-        <!-- Mobile Bottom Tabs -->
-        <mat-tab-group class="mobile-tabs">
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon>tune</mat-icon>
-            </ng-template>
-            <app-properties-panel></app-properties-panel>
-          </mat-tab>
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon>layers</mat-icon>
-            </ng-template>
-            <app-layers-panel></app-layers-panel>
-          </mat-tab>
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon>preview</mat-icon>
-            </ng-template>
-            <app-preview-panel></app-preview-panel>
-          </mat-tab>
-        </mat-tab-group>
-      </div>
-
-      <!-- Show welcome message when not authenticated but on main page -->
-      <div class="welcome-message" *ngIf="!isAuthenticated && showMainToolbar">
-        <div class="welcome-content">
-          <mat-icon class="welcome-icon">build</mat-icon>
-          <h1>{{ 'flutter_visual_builder' | translate }}</h1>
-          <p>Please configure and sign in to start building amazing Flutter apps</p>
-
-          <div class="welcome-actions" *ngIf="!isConfigured">
-            <button mat-raised-button color="primary" (click)="goToConfig()">
-              <mat-icon>settings</mat-icon>
-              Configure System
-            </button>
+              </mat-tab>
+            </mat-tab-group>
           </div>
 
-          <div class="welcome-actions" *ngIf="isConfigured">
-            <button mat-raised-button color="primary" (click)="goToLogin()">
-              <mat-icon>login</mat-icon>
-              {{ 'sign_in' | translate }}
-            </button>
+        </div>
+
+        <!-- NOT AUTHENTICATED: Show welcome message -->
+        <div class="welcome-message" *ngIf="!isAuthenticated">
+          <div class="welcome-content">
+            <mat-icon class="welcome-icon">build</mat-icon>
+            <h1>{{ 'flutter_visual_builder' | translate }}</h1>
+            <p>Please configure and sign in to start building amazing Flutter apps</p>
+
+            <div class="welcome-actions" *ngIf="!isConfigured">
+              <button mat-raised-button color="primary" (click)="goToConfig()">
+                <mat-icon>settings</mat-icon>
+                Configure System
+              </button>
+            </div>
+
+            <div class="welcome-actions" *ngIf="isConfigured">
+              <button mat-raised-button color="primary" (click)="goToLogin()">
+                <mat-icon>login</mat-icon>
+                {{ 'sign_in' | translate }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-    </mat-sidenav-content>
-  </mat-sidenav-container>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
+
+  </div>
 </div>

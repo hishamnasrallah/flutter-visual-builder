@@ -1,6 +1,14 @@
-/* src/app/app.component.scss */
+/* src/app/app.component.scss - Updated with layout fixes */
 
 .app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* MAIN APP LAYOUT */
+.main-app-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -11,6 +19,7 @@
 .main-toolbar {
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0; /* Don't shrink the toolbar */
 
   .toolbar-title {
     display: flex;
@@ -69,9 +78,10 @@
   }
 }
 
-// Sidenav Container
+// Sidenav Container - Takes remaining space
 .sidenav-container {
   flex: 1;
+  overflow: hidden;
 
   .sidenav {
     width: 280px;
@@ -84,6 +94,18 @@
   }
 }
 
+// Main Content
+.main-content {
+  height: 100%;
+  overflow: hidden;
+}
+
+// Builder Interface
+.builder-interface {
+  height: 100%;
+  overflow: hidden;
+}
+
 // Desktop Layout
 .desktop-layout {
   display: flex;
@@ -93,6 +115,7 @@
     width: 280px;
     border-right: 1px solid #e0e0e0;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 
     &.collapsed {
       width: 0;
@@ -114,6 +137,7 @@
       background: #f8f9fa;
       border-bottom: 1px solid #e0e0e0;
       min-height: 56px;
+      flex-shrink: 0;
 
       .screen-selector {
         .screen-select {
@@ -165,6 +189,7 @@
     width: 320px;
     border-left: 1px solid #e0e0e0;
     background: #f8f9fa;
+    flex-shrink: 0;
 
     .panels-tabs {
       height: 100%;
@@ -223,6 +248,7 @@
   .mobile-tabs {
     height: 300px;
     border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
 
     ::ng-deep {
       .mat-mdc-tab-header {
@@ -250,70 +276,47 @@
   }
 }
 
-// Responsive Design
-@media (max-width: 768px) {
-  .main-toolbar {
-    .toolbar-title {
-      .project-info {
-        display: none;
-      }
+// Welcome Message
+.welcome-message {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+
+  .welcome-content {
+    text-align: center;
+    max-width: 400px;
+    padding: 32px;
+
+    .welcome-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      color: #2196F3;
     }
 
-    .main-actions {
-      .panel-toggles {
-        display: none;
-      }
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .main-toolbar {
-    padding: 0 8px;
-
-    .toolbar-title {
-      .app-title {
-        font-size: 16px;
-      }
+    h1 {
+      font-size: 2rem;
+      font-weight: 300;
+      color: #333;
+      margin: 0 0 16px 0;
     }
 
-    .main-actions {
-      gap: 4px;
-
-      button {
-        width: 36px;
-        height: 36px;
-      }
+    p {
+      color: #666;
+      margin: 0 0 32px 0;
+      line-height: 1.5;
     }
-  }
 
-  .mobile-tabs {
-    height: 250px;
-
-    ::ng-deep .mat-mdc-tab-body-wrapper {
-      height: 190px;
+    .welcome-actions {
+      display: flex;
+      justify-content: center;
     }
   }
 }
 
-// Global overrides for better UX
-::ng-deep {
-  .mat-mdc-snack-bar-container {
-    &.mat-accent .mat-mdc-snack-bar-surface {
-      --mdc-snackbar-container-color: #2196F3;
-      --mdc-snackbar-supporting-text-color: white;
-    }
-  }
-
-  .mat-mdc-menu-panel {
-    max-width: 300px;
-  }
-
-  // Ensure proper scrolling
-  .cdk-virtual-scroll-viewport {
-    height: 100%;
-  }
-}
 // Header Actions
 .header-actions {
   display: flex;
@@ -465,54 +468,75 @@
   margin-left: 8px;
 }
 
-// Welcome Message
-.welcome-message {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-
-  .welcome-content {
-    text-align: center;
-    max-width: 400px;
-    padding: 32px;
-
-    .welcome-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 24px;
-      color: #2196F3;
+// Responsive Design
+@media (max-width: 768px) {
+  .main-toolbar {
+    .toolbar-title {
+      .project-info {
+        display: none;
+      }
     }
 
-    h1 {
-      font-size: 2rem;
-      font-weight: 300;
-      color: #333;
-      margin: 0 0 16px 0;
-    }
-
-    p {
-      color: #666;
-      margin: 0 0 32px 0;
-      line-height: 1.5;
-    }
-
-    .welcome-actions {
-      display: flex;
-      justify-content: center;
+    .main-actions {
+      .panel-toggles {
+        display: none;
+      }
     }
   }
-}
 
-// Responsive adjustments
-@media (max-width: 768px) {
   .header-actions {
     .language-selector {
       .language-indicator {
         display: none;
       }
     }
+  }
+}
+
+@media (max-width: 480px) {
+  .main-toolbar {
+    padding: 0 8px;
+
+    .toolbar-title {
+      .app-title {
+        font-size: 16px;
+      }
+    }
+
+    .main-actions {
+      gap: 4px;
+
+      button {
+        width: 36px;
+        height: 36px;
+      }
+    }
+  }
+
+  .mobile-tabs {
+    height: 250px;
+
+    ::ng-deep .mat-mdc-tab-body-wrapper {
+      height: 190px;
+    }
+  }
+}
+
+// Global overrides for better UX
+::ng-deep {
+  .mat-mdc-snack-bar-container {
+    &.mat-accent .mat-mdc-snack-bar-surface {
+      --mdc-snackbar-container-color: #2196F3;
+      --mdc-snackbar-supporting-text-color: white;
+    }
+  }
+
+  .mat-mdc-menu-panel {
+    max-width: 300px;
+  }
+
+  // Ensure proper scrolling
+  .cdk-virtual-scroll-viewport {
+    height: 100%;
   }
 }

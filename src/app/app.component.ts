@@ -104,8 +104,8 @@ export class AppComponent implements OnInit, OnDestroy {
   isConfigured = false;
   currentUser: any = null;
 
-  // Layout control
-  showMainToolbar = true;
+  // Layout control - FIXED: Initialize based on current route
+  showMainToolbar = false;
   isHandset$!: Observable<boolean>;
 
   // Panel visibility
@@ -144,16 +144,20 @@ export class AppComponent implements OnInit, OnDestroy {
         map(result => result.matches),
         shareReplay()
       );
+
+    // FIXED: Set initial showMainToolbar based on current route
+    this.updateToolbarVisibility(this.router.url);
   }
 
   ngOnInit(): void {
-    // Initialize app
+    // FIXED: Initialize app first before setting up router events
     this.initializeApp();
 
     // Subscribe to authentication state
     this.authService.isAuthenticated$
       .pipe(takeUntil(this.destroy$))
       .subscribe(isAuth => {
+        console.log('Authentication state changed:', isAuth);
         this.isAuthenticated = isAuth;
         this.showConfigButton = isAuth || this.configService.isConfigured();
 
@@ -168,8 +172,8 @@ export class AppComponent implements OnInit, OnDestroy {
       filter(event => event instanceof NavigationEnd),
       takeUntil(this.destroy$)
     ).subscribe((event: NavigationEnd) => {
-      // Hide main toolbar for login and config pages
-      this.showMainToolbar = !this.isSpecialRoute(event.url);
+      console.log('Navigated to:', event.url);
+      this.updateToolbarVisibility(event.url);
     });
 
     // Subscribe to language changes
@@ -185,16 +189,27 @@ export class AppComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // FIXED: Extract toolbar visibility logic
+  private updateToolbarVisibility(url: string): void {
+    const isSpecial = this.isSpecialRoute(url);
+    this.showMainToolbar = !isSpecial;
+    console.log(`URL: ${url}, isSpecialRoute: ${isSpecial}, showMainToolbar: ${this.showMainToolbar}`);
+  }
+
   private isSpecialRoute(url: string): boolean {
     const specialRoutes = ['/config', '/login'];
     return specialRoutes.some(route => url.startsWith(route));
   }
 
   private initializeApp(): void {
+    console.log('Initializing app...');
+
     // Check configuration
     this.isConfigured = this.configService.isConfigured();
+    console.log('App configured:', this.isConfigured);
 
     if (!this.isConfigured) {
+      console.log('App not configured, navigating to /config');
       this.router.navigate(['/config']);
       return;
     }
@@ -203,14 +218,19 @@ export class AppComponent implements OnInit, OnDestroy {
     this.initializeTranslations();
 
     // Check authentication
-    if (!this.authService.isAuthenticated()) {
+    const isAuthenticated = this.authService.isAuthenticated();
+    console.log('User authenticated:', isAuthenticated);
+
+    if (!isAuthenticated) {
       // Only redirect if not already on special routes
       if (!this.isSpecialRoute(this.router.url)) {
+        console.log('Not authenticated, navigating to /login');
         this.router.navigate(['/login']);
       }
     } else {
       // If authenticated and on a special route, redirect to builder
       if (this.isSpecialRoute(this.router.url)) {
+        console.log('Authenticated on special route, navigating to /builder');
         this.router.navigate(['/builder']);
       }
     }

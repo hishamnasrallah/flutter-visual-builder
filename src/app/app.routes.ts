@@ -1,8 +1,8 @@
 // src/app/app.routes.ts
 
 import { Routes } from '@angular/router';
-import { AuthGuard } from './shared/guards/auth.guard';
-import { ConfigGuard } from './shared/guards/config.guard';
+import { AuthGuard } from './shared/guards';
+import { ConfigGuard } from './shared/guards';
 
 export const routes: Routes = [
   // Public routes
