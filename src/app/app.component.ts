@@ -59,7 +59,7 @@ interface Language {
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
-    // RouterOutlet,
+    RouterOutlet,
 
     // Material Modules
     MatSidenavModule,
@@ -93,7 +93,7 @@ interface Language {
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
-  @ViewChild('drawer', { static: true }) drawer!: MatSidenav;
+  @ViewChild('drawer', { static: false }) drawer?: MatSidenav;
 
   title = 'Flutter Visual Builder';
   private destroy$ = new Subject<void>();
@@ -104,7 +104,8 @@ export class AppComponent implements OnInit, OnDestroy {
   isConfigured = false;
   currentUser: any = null;
 
-  // Layout
+  // Layout control
+  showMainToolbar = true;
   isHandset$!: Observable<boolean>;
 
   // Panel visibility
@@ -162,12 +163,13 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       });
 
-    // Subscribe to route changes
+    // Subscribe to route changes to control layout
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd),
       takeUntil(this.destroy$)
-    ).subscribe(() => {
-      // Handle route changes if needed
+    ).subscribe((event: NavigationEnd) => {
+      // Hide main toolbar for login and config pages
+      this.showMainToolbar = !this.isSpecialRoute(event.url);
     });
 
     // Subscribe to language changes
@@ -181,6 +183,11 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private isSpecialRoute(url: string): boolean {
+    const specialRoutes = ['/config', '/login'];
+    return specialRoutes.some(route => url.startsWith(route));
   }
 
   private initializeApp(): void {
@@ -197,7 +204,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Check authentication
     if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
+      // Only redirect if not already on special routes
+      if (!this.isSpecialRoute(this.router.url)) {
+        this.router.navigate(['/login']);
+      }
+    } else {
+      // If authenticated and on a special route, redirect to builder
+      if (this.isSpecialRoute(this.router.url)) {
+        this.router.navigate(['/builder']);
+      }
     }
   }
 

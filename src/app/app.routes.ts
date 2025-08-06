@@ -29,25 +29,11 @@ export const routes: Routes = [
     }
   },
 
-  // Protected routes - Main builder (default route)
-  {
-    path: '',
-    pathMatch: 'full',
-    canActivate: [AuthGuard],
-    loadComponent: () => import('./app.component').then(m => m.AppComponent),
-    data: {
-      title: 'Flutter Visual Builder',
-      description: 'Build Flutter applications visually',
-      icon: 'build',
-      requiresAuth: true
-    }
-  },
-
-  // Builder route (alternative path)
+  // Protected routes - Builder (main functionality handled by AppComponent)
   {
     path: 'builder',
+    loadComponent: () => import('../../src/app/builder/builder.component').then(m => m.BuilderComponent),
     canActivate: [AuthGuard],
-    loadComponent: () => import('./app.component').then(m => m.AppComponent),
     data: {
       title: 'Visual Builder',
       description: 'Create Flutter apps visually',
@@ -56,16 +42,16 @@ export const routes: Routes = [
     }
   },
 
-  // Future routes can be added here
-  // {
-  //   path: 'projects',
-  //   loadComponent: () => import('./projects/project-list/project-list.component').then(m => m.ProjectListComponent),
-  //   canActivate: [AuthGuard]
-  // },
+  // Default route redirects
+  {
+    path: '',
+    redirectTo: '/builder',
+    pathMatch: 'full'
+  },
 
-  // Wildcard route - redirect based on auth state
+  // Wildcard route - redirect to appropriate page based on state
   {
     path: '**',
-    redirectTo: ''
+    redirectTo: '/builder'
   }
 ];

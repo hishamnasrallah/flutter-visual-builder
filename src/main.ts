@@ -4,8 +4,8 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 import { appConfig } from './app/app.config';
 
-// Check if running in production
-const isProduction = true; // Set this based on your environment
+// Check if running in production - set to false for development
+const isProduction = false; // Change to true for production builds
 if (isProduction) {
   // Disable console logging in production for better performance
   console.log = console.warn = console.info = () => {};
@@ -55,6 +55,9 @@ bootstrapApplication(AppComponent, appConfig)
           ">
             Refresh Page
           </button>
+          <div style="margin-top: 20px; font-size: 12px; color: #666;">
+            Error details: ${err.message || 'Unknown error'}
+          </div>
         </div>
       </div>
     `;

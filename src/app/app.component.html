@@ -1,12 +1,12 @@
 <!-- src/app/app.component.html -->
 <div class="app-container" *ngIf="isHandset$ | async as isHandset">
   <!-- Main Toolbar -->
-  <mat-toolbar class="main-toolbar" color="primary">
+  <mat-toolbar class="main-toolbar" color="primary" *ngIf="showMainToolbar">
     <button
       type="button"
       aria-label="Toggle sidenav"
       mat-icon-button
-      (click)="drawer.toggle()"
+      (click)="drawer?.toggle()"
       *ngIf="isHandset">
       <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
     </button>
@@ -210,8 +210,11 @@
     </div>
   </mat-toolbar>
 
-  <!-- Main Layout -->
-  <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset">
+  <!-- Router Outlet for pages that don't need the main layout -->
+  <router-outlet *ngIf="!showMainToolbar"></router-outlet>
+
+  <!-- Main Layout for authenticated builder -->
+  <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset" *ngIf="showMainToolbar">
 
     <!-- Mobile Drawer -->
     <mat-sidenav
@@ -235,7 +238,7 @@
       <div class="desktop-layout" *ngIf="!isHandset && isAuthenticated">
 
         <!-- Left Sidebar (Widget Toolbox) -->
-        <div class="left-sidebar" [class.collapsed]="!drawer.opened">
+        <div class="left-sidebar" [class.collapsed]="!drawer?.opened">
           <app-widget-toolbox></app-widget-toolbox>
         </div>
 
@@ -359,8 +362,8 @@
         </mat-tab-group>
       </div>
 
-      <!-- Show welcome message when not authenticated -->
-      <div class="welcome-message" *ngIf="!isAuthenticated">
+      <!-- Show welcome message when not authenticated but on main page -->
+      <div class="welcome-message" *ngIf="!isAuthenticated && showMainToolbar">
         <div class="welcome-content">
           <mat-icon class="welcome-icon">build</mat-icon>
           <h1>{{ 'flutter_visual_builder' | translate }}</h1>
