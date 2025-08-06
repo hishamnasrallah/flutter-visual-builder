@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ConfigService } from '../../builder/services/config.service';
+import { ConfigService } from '../services/config.service';
 
 @Injectable({
   providedIn: 'root'

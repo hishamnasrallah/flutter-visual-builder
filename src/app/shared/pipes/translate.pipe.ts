@@ -1,6 +1,6 @@
 // src/app/shared/pipes/translate.pipe.ts
 import { Pipe, PipeTransform, ChangeDetectorRef, OnDestroy } from '@angular/core';
-import { TranslationService } from '../../builder/services/translation.service';
+import { TranslationService } from '../services/translation.service';
 import { Subject, takeUntil } from 'rxjs';
 
 @Pipe({

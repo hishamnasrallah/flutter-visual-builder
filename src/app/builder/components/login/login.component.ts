@@ -1,34 +1,23 @@
-// src/app/shared/components/login/login.component.ts
-
+// src/app/builder/components/login/login.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { AuthService } from '../../../shared/services/auth.service';
+import { TranslationService } from '../../../shared/services/translation.service';
+import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { Subject, takeUntil } from 'rxjs';
 
-// Material Imports
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatRippleModule } from '@angular/material/core';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-
-import { AuthService } from '../../services/auth.service';
-import { TranslationService } from '../../services/translation.service';
-import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-
-interface Language {
-  code: string;
-  name: string;
-  nativeName: string;
-  flag: string;
-  direction: 'ltr' | 'rtl';
-}
 
 @Component({
   selector: 'app-login',
@@ -36,30 +25,31 @@ interface Language {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
+    MatInputModule,
+    MatFormFieldModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatCheckboxModule,
-    MatSnackBarModule,
+    MatRippleModule,
     MatMenuModule,
     MatTooltipModule,
     TranslatePipe
   ],
   template: `
     <div class="login-layout">
-      <!-- Background -->
-      <div class="login-bg">
-        <div class="bg-shape shape-1"></div>
-        <div class="bg-shape shape-2"></div>
-        <div class="bg-shape shape-3"></div>
+      <!-- Ocean Mint Background -->
+      <div class="ocean-mint-bg">
+        <div class="wave wave-1"></div>
+        <div class="wave wave-2"></div>
+        <div class="wave wave-3"></div>
+        <div class="floating-shape shape-1"></div>
+        <div class="floating-shape shape-2"></div>
+        <div class="floating-shape shape-3"></div>
       </div>
 
       <!-- Login Container -->
       <div class="login-container">
-
         <!-- Left Side - Branding -->
         <div class="branding-section">
           <div class="branding-content">
@@ -68,43 +58,43 @@ interface Language {
                 <mat-icon>build</mat-icon>
               </div>
               <h1 class="brand-name">Flutter Visual Builder</h1>
-              <p class="brand-tagline">{{ 'flutter_visual_builder' | translate }}</p>
+              <p class="brand-tagline">{{ 'build_beautiful_apps' | translate }}</p>
             </div>
 
             <div class="features-showcase">
-              <h2 class="showcase-title">Build Amazing Flutter Apps</h2>
+              <h2 class="showcase-title">{{ 'build_faster_deploy_smarter' | translate }}</h2>
               <p class="showcase-subtitle">
-                Create beautiful, responsive mobile applications with our visual drag-and-drop interface.
+                Create stunning Flutter applications with our intuitive visual builder
               </p>
 
               <div class="feature-cards">
-                <div class="feature-card">
+                <div class="feature-card" matRipple>
                   <div class="feature-icon">
                     <mat-icon>speed</mat-icon>
                   </div>
                   <div class="feature-content">
                     <h4>Fast Development</h4>
-                    <p>Build apps 10x faster with visual tools</p>
+                    <p>Build Flutter apps 10x faster with visual components</p>
                   </div>
                 </div>
 
-                <div class="feature-card">
+                <div class="feature-card" matRipple>
                   <div class="feature-icon">
                     <mat-icon>phone_android</mat-icon>
                   </div>
                   <div class="feature-content">
-                    <h4>Native Performance</h4>
-                    <p>Generate clean, optimized Flutter code</p>
+                    <h4>Cross Platform</h4>
+                    <p>Deploy to iOS and Android from a single codebase</p>
                   </div>
                 </div>
 
-                <div class="feature-card">
+                <div class="feature-card" matRipple>
                   <div class="feature-icon">
-                    <mat-icon>palette</mat-icon>
+                    <mat-icon>code</mat-icon>
                   </div>
                   <div class="feature-content">
-                    <h4>Beautiful UI</h4>
-                    <p>Create stunning interfaces with ease</p>
+                    <h4>Clean Code</h4>
+                    <p>Generate production-ready Flutter code automatically</p>
                   </div>
                 </div>
               </div>
@@ -119,16 +109,13 @@ interface Language {
         <!-- Right Side - Login Form -->
         <div class="form-section">
           <div class="form-wrapper">
-
             <!-- Language Selector -->
             <div class="language-selector">
-              <button mat-icon-button [matMenuTriggerFor]="languageMenu"
-                      [matTooltip]="'change_language' | translate">
+              <button mat-icon-button [matMenuTriggerFor]="languageMenu" matTooltip="{{ 'change_language' | translate }}">
                 <mat-icon>language</mat-icon>
               </button>
               <mat-menu #languageMenu="matMenu">
-                <button mat-menu-item *ngFor="let lang of availableLanguages"
-                        (click)="changeLanguage(lang.code)">
+                <button mat-menu-item *ngFor="let lang of availableLanguages" (click)="changeLanguage(lang.code)">
                   <span class="language-option">
                     <span class="flag">{{ lang.flag }}</span>
                     <span>{{ lang.name }}</span>
@@ -137,40 +124,39 @@ interface Language {
               </mat-menu>
             </div>
 
-            <!-- Login Header -->
+            <!-- Compact Header -->
             <div class="form-header">
               <div class="header-icon">
                 <mat-icon>login</mat-icon>
               </div>
               <div class="header-text">
-                <h2>{{ 'login_title' | translate }}</h2>
-                <p>{{ 'login_subtitle' | translate }}</p>
+                <h2>{{ 'welcome_back' | translate }}</h2>
+                <p>{{ 'sign_in_to_continue' | translate }}</p>
               </div>
             </div>
 
             <!-- Login Form -->
             <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="login-form">
-
               <!-- Username Field -->
-              <mat-form-field appearance="outline" class="form-field">
+              <mat-form-field appearance="outline" class="form-field-ocean">
                 <mat-label>{{ 'username' | translate }}</mat-label>
                 <input matInput
                        formControlName="username"
-                       [placeholder]="'username' | translate"
+                       [placeholder]="'enter_username' | translate"
                        autocomplete="username">
                 <mat-icon matPrefix>person</mat-icon>
                 <mat-error *ngIf="loginForm.get('username')?.hasError('required')">
-                  Username is required
+                  {{ 'username_required' | translate }}
                 </mat-error>
               </mat-form-field>
 
               <!-- Password Field -->
-              <mat-form-field appearance="outline" class="form-field">
+              <mat-form-field appearance="outline" class="form-field-ocean">
                 <mat-label>{{ 'password' | translate }}</mat-label>
                 <input matInput
                        [type]="hidePassword ? 'password' : 'text'"
                        formControlName="password"
-                       [placeholder]="'password' | translate"
+                       [placeholder]="'enter_password' | translate"
                        autocomplete="current-password">
                 <mat-icon matPrefix>lock</mat-icon>
                 <button mat-icon-button
@@ -181,7 +167,10 @@ interface Language {
                   <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
                 </button>
                 <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
-                  Password is required
+                  {{ 'password_required' | translate }}
+                </mat-error>
+                <mat-error *ngIf="loginForm.get('password')?.hasError('minlength')">
+                  {{ 'password_min_length' | translate }}
                 </mat-error>
               </mat-form-field>
 
@@ -198,7 +187,6 @@ interface Language {
               <!-- Submit Button -->
               <button type="submit"
                       mat-raised-button
-                      color="primary"
                       class="login-button"
                       [disabled]="!loginForm.valid || isLoading">
                 <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
@@ -217,7 +205,10 @@ interface Language {
 
             <!-- Footer -->
             <div class="form-footer">
-              <p>Need help? Contact your system administrator</p>
+              <p>{{ 'no_account' | translate }}</p>
+              <a href="#" class="contact-link" (click)="$event.preventDefault()">
+                {{ 'contact_admin' | translate }}
+              </a>
             </div>
           </div>
         </div>
@@ -233,12 +224,12 @@ export class LoginComponent implements OnInit, OnDestroy {
   errorMessage = '';
   private destroy$ = new Subject<void>();
 
-  availableLanguages: Language[] = [
-    { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸', direction: 'ltr' },
-    { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', direction: 'rtl' },
-    { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', direction: 'ltr' },
-    { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', direction: 'ltr' },
-    { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', direction: 'ltr' }
+  availableLanguages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'ar', name: 'العربية', flag: '🇸🇦' },
+    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' }
   ];
 
   constructor(
@@ -250,7 +241,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   ) {
     this.loginForm = this.fb.group({
       username: ['', [Validators.required]],
-      password: ['', [Validators.required]],
+      password: ['', [Validators.required, Validators.minLength(3)]],
       rememberMe: [false]
     });
   }
@@ -262,7 +253,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         // Re-translate error message if it exists
         if (this.errorMessage) {
-          this.setErrorMessage(401); // Re-translate with generic error
+          this.updateErrorMessage();
         }
       });
   }
@@ -293,8 +284,9 @@ export class LoginComponent implements OnInit, OnDestroy {
       this.authService.login(credentials).subscribe({
         next: () => {
           const successMessage = this.translationService.instant('login_success');
-          this.snackBar.open(\`✅ \${successMessage}\`, 'Close', {
-            duration: 3000
+          this.snackBar.open(`✅ ${successMessage}`, 'Close', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
           });
           this.router.navigate(['/']);
           this.isLoading = false;
@@ -304,8 +296,9 @@ export class LoginComponent implements OnInit, OnDestroy {
           this.setErrorMessage(err.status);
 
           const errorTitle = this.translationService.instant('login_failed');
-          this.snackBar.open(\`❌ \${errorTitle}\`, 'Close', {
-            duration: 4000
+          this.snackBar.open(`❌ ${errorTitle}`, 'Close', {
+            duration: 4000,
+            panelClass: ['error-snackbar']
           });
           this.isLoading = false;
         }
@@ -321,7 +314,8 @@ export class LoginComponent implements OnInit, OnDestroy {
       this.errorMessage = this.translationService.instant('fill_required_fields');
       const warningMessage = this.translationService.instant('complete_all_fields');
       this.snackBar.open(warningMessage, 'Close', {
-        duration: 3000
+        duration: 3000,
+        panelClass: ['warning-snackbar']
       });
     }
   }
@@ -339,7 +333,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   private updateErrorMessage(): void {
+    // Re-translate the current error message
     if (this.errorMessage) {
+      // This will re-apply the translation for the current error
       this.setErrorMessage(401); // Default to generic error
     }
   }

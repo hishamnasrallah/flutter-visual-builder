@@ -13,13 +13,6 @@ export interface LoginRequest {
 export interface LoginResponse {
   refresh: string;
   access: string;
-  user?: {
-    id: number;
-    username: string;
-    email: string;
-    first_name?: string;
-    last_name?: string;
-  };
 }
 
 @Injectable({
@@ -28,10 +21,6 @@ export interface LoginResponse {
 export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
-
-  private readonly ACCESS_TOKEN_KEY = 'flutter_builder_access_token';
-  private readonly REFRESH_TOKEN_KEY = 'flutter_builder_refresh_token';
-  private readonly USER_KEY = 'flutter_builder_user';
 
   constructor(
     private http: HttpClient,
@@ -45,52 +34,39 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${baseUrl}/auth/login/`, credentials)
       .pipe(
         tap(response => {
-          console.log('Auth: Login successful');
-          localStorage.setItem(this.ACCESS_TOKEN_KEY, response.access);
-          localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refresh);
-
-          if (response.user) {
-            localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
-          }
-
+          localStorage.setItem('access_token', response.access);
+          localStorage.setItem('refresh_token', response.refresh);
           this.isAuthenticatedSubject.next(true);
         })
       );
-  }
-
-  logout(): void {
-    localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-    this.isAuthenticatedSubject.next(false);
-    console.log('Auth: User logged out');
-  }
-
-  getAccessToken(): string | null {
-    return localStorage.getItem(this.ACCESS_TOKEN_KEY);
-  }
-
-  getRefreshToken(): string | null {
-    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
-  }
-
-  getCurrentUser(): any {
-    const userString = localStorage.getItem(this.USER_KEY);
-    return userString ? JSON.parse(userString) : null;
   }
 
   refreshToken(): Observable<LoginResponse> {
     const baseUrl = this.configService.getBaseUrl();
     const refreshToken = this.getRefreshToken();
 
-    return this.http.post<LoginResponse>(`${baseUrl}/auth/token/refresh/`, {
+    return this.http.post<LoginResponse>(`${baseUrl}/auth/refresh/`, {
       refresh: refreshToken
     }).pipe(
       tap(response => {
-        localStorage.setItem(this.ACCESS_TOKEN_KEY, response.access);
+        localStorage.setItem('access_token', response.access);
         this.isAuthenticatedSubject.next(true);
       })
     );
+  }
+
+  logout(): void {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    this.isAuthenticatedSubject.next(false);
+  }
+
+  getAccessToken(): string | null {
+    return localStorage.getItem('access_token');
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refresh_token');
   }
 
   private checkAuthStatus(): void {

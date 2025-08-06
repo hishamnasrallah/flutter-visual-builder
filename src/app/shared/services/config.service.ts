@@ -1,12 +1,11 @@
 // src/app/shared/services/config.service.ts
-
 import { Injectable } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ConfigService {
-  private readonly BASE_URL_KEY = 'flutter_builder_base_url';
+  private readonly BASE_URL_KEY = 'base_url';
 
   setBaseUrl(url: string): void {
     localStorage.setItem(this.BASE_URL_KEY, url);
@@ -18,9 +17,5 @@ export class ConfigService {
 
   isConfigured(): boolean {
     return !!this.getBaseUrl();
-  }
-
-  clearConfig(): void {
-    localStorage.removeItem(this.BASE_URL_KEY);
   }
 }

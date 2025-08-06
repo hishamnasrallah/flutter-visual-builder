@@ -1,7 +1,5 @@
 <!-- src/app/app.component.html -->
-
-<div class="app-container">
-
+<div class="app-container" *ngIf="isHandset$ | async as isHandset">
   <!-- Main Toolbar -->
   <mat-toolbar class="main-toolbar" color="primary">
     <button
@@ -9,7 +7,7 @@
       aria-label="Toggle sidenav"
       mat-icon-button
       (click)="drawer.toggle()"
-      *ngIf="isHandset$ | async">
+      *ngIf="isHandset">
       <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
     </button>
 
@@ -31,7 +29,7 @@
       <!-- Undo/Redo -->
       <button
         mat-icon-button
-        [matTooltip]="'Undo' | translate"
+        [matTooltip]="'undo' | translate"
         matTooltipPosition="below"
         [disabled]="!canUndo()"
         (click)="onUndo()">
@@ -39,7 +37,7 @@
       </button>
       <button
         mat-icon-button
-        [matTooltip]="'Redo' | translate"
+        [matTooltip]="'redo' | translate"
         matTooltipPosition="below"
         [disabled]="!canRedo()"
         (click)="onRedo()">
@@ -65,7 +63,7 @@
       <mat-menu #actionsMenu="matMenu">
         <button mat-menu-item (click)="onClearCanvas()">
           <mat-icon>clear</mat-icon>
-          <span>Clear Canvas</span>
+          <span>{{ 'clear_canvas' | translate }}</span>
         </button>
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="onGenerateCode()">
@@ -83,7 +81,7 @@
       </mat-menu>
 
       <!-- Panel Toggles -->
-      <div class="panel-toggles" *ngIf="!(isHandset$ | async)">
+      <div class="panel-toggles" *ngIf="!isHandset">
         <button
           mat-icon-button
           matTooltip="Toggle Layers Panel"
@@ -192,7 +190,7 @@
 
       <!-- Config Button for non-authenticated -->
       <button mat-icon-button
-              *ngIf="!isAuthenticated && isConfigured"
+              *ngIf="!isAuthenticated && showConfigButton"
               (click)="goToConfig()"
               class="config-btn"
               matTooltip="Configuration"
@@ -202,7 +200,7 @@
 
       <!-- Login Button for non-authenticated -->
       <button mat-raised-button
-              *ngIf="!isAuthenticated && isConfigured"
+              *ngIf="!isAuthenticated && showConfigButton"
               (click)="goToLogin()"
               class="login-btn"
               color="accent">
@@ -213,16 +211,16 @@
   </mat-toolbar>
 
   <!-- Main Layout -->
-  <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset$ | async">
+  <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset">
 
     <!-- Mobile Drawer -->
     <mat-sidenav
       #drawer
       class="sidenav"
       fixedInViewport
-      [attr.role]="(isHandset$ | async) ? 'dialog' : 'navigation'"
-      [mode]="(isHandset$ | async) ? 'over' : 'side'"
-      [opened]="(isHandset$ | async) === false && isAuthenticated">
+      [attr.role]="isHandset ? 'dialog' : 'navigation'"
+      [mode]="isHandset ? 'over' : 'side'"
+      [opened]="!isHandset && isAuthenticated">
 
       <!-- Widget Toolbox -->
       <div class="drawer-content" *ngIf="isAuthenticated">
@@ -234,10 +232,10 @@
     <mat-sidenav-content class="main-content">
 
       <!-- Show builder only when authenticated -->
-      <div class="desktop-layout" *ngIf="!(isHandset$ | async) && isAuthenticated">
+      <div class="desktop-layout" *ngIf="!isHandset && isAuthenticated">
 
         <!-- Left Sidebar (Widget Toolbox) -->
-        <div class="left-sidebar" [class.collapsed]="drawer.opened === false">
+        <div class="left-sidebar" [class.collapsed]="!drawer.opened">
           <app-widget-toolbox></app-widget-toolbox>
         </div>
 
@@ -250,7 +248,7 @@
             <!-- Screen Selector -->
             <div class="screen-selector">
               <mat-form-field appearance="outline" class="screen-select">
-                <mat-label>Current Screen</mat-label>
+                <mat-label>{{ 'current_screen' | translate }}</mat-label>
                 <mat-select
                   [value]="currentScreen?.id"
                   (selectionChange)="onScreenSelectionChange($event.value)">
@@ -273,11 +271,11 @@
 
             <!-- Zoom Controls -->
             <div class="zoom-controls">
-              <button mat-icon-button matTooltip="Zoom Out">
+              <button mat-icon-button [matTooltip]="'zoom_out' | translate">
                 <mat-icon>zoom_out</mat-icon>
               </button>
               <span class="zoom-level">100%</span>
-              <button mat-icon-button matTooltip="Zoom In">
+              <button mat-icon-button [matTooltip]="'zoom_in' | translate">
                 <mat-icon>zoom_in</mat-icon>
               </button>
             </div>
@@ -333,7 +331,7 @@
       </div>
 
       <!-- Mobile Layout -->
-      <div class="mobile-layout" *ngIf="isHandset$ | async && isAuthenticated">
+      <div class="mobile-layout" *ngIf="isHandset && isAuthenticated">
         <div class="mobile-canvas">
           <app-builder-canvas></app-builder-canvas>
         </div>
@@ -382,245 +380,6 @@
             </button>
           </div>
         </div>
-      </div>
-
-    </mat-sidenav-content>
-  </mat-sidenav-container>
-</div>
-
-          <button mat-menu-item class="settings-item">
-            <mat-icon>settings</mat-icon>
-            <span>{{ 'settings' | translate }}</span>
-          </button>
-
-          <mat-divider></mat-divider>
-
-          <button mat-menu-item (click)="logout()" class="logout-item">
-            <mat-icon>logout</mat-icon>
-            <span>{{ 'logout' | translate }}</span>
-          </button>
-        </mat-menu>
-      </div>
-
-      <!-- Config Button for non-authenticated -->
-      <button mat-icon-button
-              *ngIf="!isAuthenticated && isConfigured"
-              (click)="goToConfig()"
-              class="config-btn"
-              matTooltip="Configuration"
-              matTooltipPosition="below">
-        <mat-icon>settings</mat-icon>
-      </button>
-
-      <!-- Login Button for non-authenticated -->
-      <button mat-raised-button
-              *ngIf="!isAuthenticated && isConfigured"
-              (click)="goToLogin()"
-              class="login-btn"
-              color="accent">
-        <mat-icon>login</mat-icon>
-        {{ 'sign_in' | translate }}
-      </button>
-    </div>
-
-      <!-- More Actions Menu -->
-      <button mat-icon-button [matMenuTriggerFor]="actionsMenu">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <mat-menu #actionsMenu="matMenu">
-        <button mat-menu-item (click)="onClearCanvas()">
-          <mat-icon>clear</mat-icon>
-          <span>Clear Canvas</span>
-        </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="onGenerateCode()">
-          <mat-icon>code</mat-icon>
-          <span>Generate Code</span>
-        </button>
-        <button mat-menu-item (click)="onDownloadProject()">
-          <mat-icon>download</mat-icon>
-          <span>Download Project</span>
-        </button>
-        <button mat-menu-item (click)="onBuildAPK()">
-          <mat-icon>build</mat-icon>
-          <span>Build APK</span>
-        </button>
-      </mat-menu>
-
-      <!-- Panel Toggles -->
-      <div class="panel-toggles" *ngIf="!(isHandset$ | async)">
-        <button
-          mat-icon-button
-          matTooltip="Toggle Layers Panel"
-          [class.active]="showLayersPanel"
-          (click)="toggleLayersPanel()">
-          <mat-icon>layers</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          matTooltip="Toggle Properties Panel"
-          [class.active]="showPropertiesPanel"
-          (click)="togglePropertiesPanel()">
-          <mat-icon>tune</mat-icon>
-        </button>
-        <button
-          mat-icon-button
-          matTooltip="Toggle Preview Panel"
-          [class.active]="showPreviewPanel"
-          (click)="togglePreviewPanel()">
-          <mat-icon>preview</mat-icon>
-        </button>
-      </div>
-    </div>
-  </mat-toolbar>
-
-  <!-- Main Layout -->
-  <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset$ | async">
-
-    <!-- Mobile Drawer -->
-    <mat-sidenav
-      #drawer
-      class="sidenav"
-      fixedInViewport
-      [attr.role]="(isHandset$ | async) ? 'dialog' : 'navigation'"
-      [mode]="(isHandset$ | async) ? 'over' : 'side'"
-      [opened]="(isHandset$ | async) === false">
-
-      <!-- Widget Toolbox -->
-      <div class="drawer-content">
-        <app-widget-toolbox></app-widget-toolbox>
-      </div>
-    </mat-sidenav>
-
-    <!-- Main Content -->
-    <mat-sidenav-content class="main-content">
-
-      <!-- Desktop Layout -->
-      <div class="desktop-layout" *ngIf="!(isHandset$ | async)">
-
-        <!-- Left Sidebar (Widget Toolbox) -->
-        <div class="left-sidebar" [class.collapsed]="drawer.opened === false">
-          <app-widget-toolbox></app-widget-toolbox>
-        </div>
-
-        <!-- Center Area -->
-        <div class="center-area">
-
-          <!-- Secondary Toolbar -->
-          <div class="secondary-toolbar" *ngIf="currentProject">
-
-            <!-- Screen Selector -->
-            <div class="screen-selector">
-              <mat-form-field appearance="outline" class="screen-select">
-                <mat-label>Current Screen</mat-label>
-                <mat-select
-                  [value]="currentScreen?.id"
-                  (selectionChange)="onScreenSelectionChange($event.value)">
-                  <mat-option
-                    *ngFor="let screen of projectScreens"
-                    [value]="screen.id">
-                    {{ screen.name }} {{ screen.is_home ? '(Home)' : '' }}
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-
-            <!-- Canvas Controls -->
-            <div class="canvas-controls">
-              <mat-button-toggle-group name="viewMode" aria-label="View Mode">
-                <mat-button-toggle value="design">Design</mat-button-toggle>
-                <mat-button-toggle value="preview" [disabled]="true">Preview</mat-button-toggle>
-              </mat-button-toggle-group>
-            </div>
-
-            <!-- Zoom Controls -->
-            <div class="zoom-controls">
-              <button mat-icon-button matTooltip="Zoom Out">
-                <mat-icon>zoom_out</mat-icon>
-              </button>
-              <span class="zoom-level">100%</span>
-              <button mat-icon-button matTooltip="Zoom In">
-                <mat-icon>zoom_in</mat-icon>
-              </button>
-            </div>
-          </div>
-
-          <!-- Canvas Area -->
-          <div class="canvas-area">
-            <app-builder-canvas></app-builder-canvas>
-          </div>
-        </div>
-
-        <!-- Right Sidebar -->
-        <div class="right-sidebar">
-
-          <!-- Tabbed Panels -->
-          <mat-tab-group class="panels-tabs" dynamicHeight>
-
-            <!-- Properties Panel -->
-            <mat-tab *ngIf="showPropertiesPanel">
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">tune</mat-icon>
-                Properties
-              </ng-template>
-              <div class="tab-content">
-                <app-properties-panel></app-properties-panel>
-              </div>
-            </mat-tab>
-
-            <!-- Layers Panel -->
-            <mat-tab *ngIf="showLayersPanel">
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">layers</mat-icon>
-                Layers
-              </ng-template>
-              <div class="tab-content">
-                <app-layers-panel></app-layers-panel>
-              </div>
-            </mat-tab>
-
-            <!-- Preview Panel -->
-            <mat-tab *ngIf="showPreviewPanel">
-              <ng-template mat-tab-label>
-                <mat-icon class="tab-icon">preview</mat-icon>
-                Preview
-              </ng-template>
-              <div class="tab-content">
-                <app-preview-panel></app-preview-panel>
-              </div>
-            </mat-tab>
-
-          </mat-tab-group>
-        </div>
-      </div>
-
-      <!-- Mobile Layout -->
-      <div class="mobile-layout" *ngIf="isHandset$ | async">
-        <div class="mobile-canvas">
-          <app-builder-canvas></app-builder-canvas>
-        </div>
-
-        <!-- Mobile Bottom Tabs -->
-        <mat-tab-group class="mobile-tabs">
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon>tune</mat-icon>
-            </ng-template>
-            <app-properties-panel></app-properties-panel>
-          </mat-tab>
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon>layers</mat-icon>
-            </ng-template>
-            <app-layers-panel></app-layers-panel>
-          </mat-tab>
-          <mat-tab>
-            <ng-template mat-tab-label>
-              <mat-icon>preview</mat-icon>
-            </ng-template>
-            <app-preview-panel></app-preview-panel>
-          </mat-tab>
-        </mat-tab-group>
       </div>
 
     </mat-sidenav-content>

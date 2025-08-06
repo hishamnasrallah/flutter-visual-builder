@@ -1,9 +1,11 @@
 // src/app/app.component.ts
 
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
 
 // Angular Material Imports
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
@@ -33,9 +35,22 @@ import { PreviewPanelComponent } from './builder/components/preview-panel/previe
 // Services
 import { FlutterProjectService } from './builder/services/flutter-project.service';
 import { UiBuilderService } from './builder/services/ui-builder.service';
+import { AuthService } from './shared/services/auth.service';
+import { ConfigService } from './shared/services/config.service';
+import { TranslationService } from './shared/services/translation.service';
 import { FlutterProject, Screen } from './shared/models';
+import { TranslatePipe } from './shared/pipes/translate.pipe';
 
 import { Observable, map, shareReplay } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+
+interface Language {
+  code: string;
+  name: string;
+  nativeName: string;
+  flag: string;
+  direction: 'ltr' | 'rtl';
+}
 
 @Component({
   selector: 'app-root',
@@ -44,6 +59,7 @@ import { Observable, map, shareReplay } from 'rxjs';
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    // RouterOutlet,
 
     // Material Modules
     MatSidenavModule,
@@ -57,6 +73,8 @@ import { Observable, map, shareReplay } from 'rxjs';
     MatMenuModule,
     MatSnackBarModule,
     MatButtonToggleModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
 
     // CDK Modules
     LayoutModule,
@@ -66,16 +84,27 @@ import { Observable, map, shareReplay } from 'rxjs';
     BuilderCanvasComponent,
     PropertiesPanelComponent,
     LayersPanelComponent,
-    PreviewPanelComponent
+    PreviewPanelComponent,
+
+    // Pipes
+    TranslatePipe
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   @ViewChild('drawer', { static: true }) drawer!: MatSidenav;
 
   title = 'Flutter Visual Builder';
+  private destroy$ = new Subject<void>();
 
+  // Authentication state
+  isAuthenticated = false;
+  showConfigButton = false;
+  isConfigured = false;
+  currentUser: any = null;
+
+  // Layout
   isHandset$!: Observable<boolean>;
 
   // Panel visibility
@@ -88,47 +117,158 @@ export class AppComponent implements OnInit {
   currentScreen: Screen | null = null;
   projectScreens: Screen[] = [];
 
-  constructor(
-  private breakpointObserver: BreakpointObserver,
-  private flutterProjectService: FlutterProjectService,
-  private uiBuilderService: UiBuilderService,
-  private snackBar: MatSnackBar
-) {
-  this.isHandset$ = this.breakpointObserver.observe(Breakpoints.Handset)
-    .pipe(
-      map(result => result.matches),
-      shareReplay()
-    );
-}
+  // Language support
+  currentLanguage = 'en';
+  availableLanguages: Language[] = [
+    { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸', direction: 'ltr' },
+    { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', direction: 'rtl' },
+    { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', direction: 'ltr' },
+    { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', direction: 'ltr' },
+    { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', direction: 'ltr' }
+  ];
 
-  // ... rest of your existing component logic stays the same
+  constructor(
+    private breakpointObserver: BreakpointObserver,
+    private flutterProjectService: FlutterProjectService,
+    private uiBuilderService: UiBuilderService,
+    private authService: AuthService,
+    private configService: ConfigService,
+    private translationService: TranslationService,
+    private snackBar: MatSnackBar,
+    private router: Router,
+    private http: HttpClient
+  ) {
+    this.isHandset$ = this.breakpointObserver.observe(Breakpoints.Handset)
+      .pipe(
+        map(result => result.matches),
+        shareReplay()
+      );
+  }
+
   ngOnInit(): void {
-    // Subscribe to current project
-    this.flutterProjectService.currentProject$.subscribe(project => {
-      this.currentProject = project;
+    // Initialize app
+    this.initializeApp();
+
+    // Subscribe to authentication state
+    this.authService.isAuthenticated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(isAuth => {
+        this.isAuthenticated = isAuth;
+        this.showConfigButton = isAuth || this.configService.isConfigured();
+
+        if (isAuth) {
+          this.loadUserProfile();
+          this.initializeBuilder();
+        }
+      });
+
+    // Subscribe to route changes
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      // Handle route changes if needed
     });
+
+    // Subscribe to language changes
+    this.translationService.languageChange$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(lang => {
+        this.currentLanguage = lang;
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private initializeApp(): void {
+    // Check configuration
+    this.isConfigured = this.configService.isConfigured();
+
+    if (!this.isConfigured) {
+      this.router.navigate(['/config']);
+      return;
+    }
+
+    // Initialize translations
+    this.initializeTranslations();
+
+    // Check authentication
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+    }
+  }
+
+  private initializeTranslations(): void {
+    const savedLang = localStorage.getItem('preferredLanguage');
+    if (savedLang && this.availableLanguages.some(l => l.code === savedLang)) {
+      this.currentLanguage = savedLang;
+      this.translationService.setLanguage(savedLang).subscribe();
+    } else {
+      this.translationService.initializeWithDefaults().subscribe();
+    }
+  }
+
+  private initializeBuilder(): void {
+    // Subscribe to current project
+    this.flutterProjectService.currentProject$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(project => {
+        this.currentProject = project;
+      });
 
     // Subscribe to current screen
-    this.flutterProjectService.currentScreen$.subscribe(screen => {
-      this.currentScreen = screen;
-      if (screen && screen.ui_structure) {
-        this.uiBuilderService.setUIStructure(screen.ui_structure);
-      }
-    });
+    this.flutterProjectService.currentScreen$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(screen => {
+        this.currentScreen = screen;
+        if (screen && screen.ui_structure) {
+          this.uiBuilderService.setUIStructure(screen.ui_structure);
+        }
+      });
 
     // Subscribe to project screens
-    this.flutterProjectService.projectScreens$.subscribe(screens => {
-      this.projectScreens = screens;
-    });
+    this.flutterProjectService.projectScreens$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(screens => {
+        this.projectScreens = screens;
+      });
 
-    // Load a demo project for development
+    // Load demo project for development
     this.loadDemoProject();
+  }
+
+  private loadUserProfile(): void {
+    if (!this.configService.isConfigured()) return;
+
+    const baseUrl = this.configService.getBaseUrl();
+    this.http.get(`${baseUrl}/auth/me/`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (profile: any) => {
+          this.currentUser = profile;
+
+          // Set language from user preference
+          if (profile.preference?.lang) {
+            this.changeLanguage({
+              code: profile.preference.lang,
+              name: '',
+              nativeName: '',
+              flag: '',
+              direction: profile.preference.lang === 'ar' ? 'rtl' : 'ltr'
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Error loading user profile:', err);
+        }
+      });
   }
 
   private async loadDemoProject(): Promise<void> {
     try {
-      // This would typically be loaded from user's project list
-      // For demo purposes, we'll create a sample project structure
       const demoProject: FlutterProject = {
         id: 1,
         name: 'My Flutter App',
@@ -174,17 +314,57 @@ export class AppComponent implements OnInit {
         updated_at: new Date().toISOString()
       };
 
-      // Set demo data (in real app, this would come from API)
       this.currentProject = demoProject;
       this.currentScreen = demoScreen;
       this.projectScreens = [demoScreen];
-
-      // Set UI structure in builder service
       this.uiBuilderService.setUIStructure(demoScreen.ui_structure);
 
     } catch (error) {
       console.error('Error loading demo project:', error);
     }
+  }
+
+  // Language methods
+  changeLanguage(language: Language): void {
+    this.currentLanguage = language.code;
+    this.translationService.setLanguage(language.code).subscribe({
+      next: () => {
+        console.log('Language changed to:', language.name);
+      },
+      error: (err) => {
+        console.error('Error changing language:', err);
+      }
+    });
+  }
+
+  // Navigation methods
+  logout(): void {
+    this.authService.logout();
+    this.currentUser = null;
+    this.router.navigate(['/login']);
+
+    this.snackBar.open('Signed out successfully', 'Close', {
+      duration: 3000
+    });
+  }
+
+  goToConfig(): void {
+    this.router.navigate(['/config']);
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
+
+  getUserDisplayName(): string {
+    if (!this.currentUser) return 'User';
+
+    const nameParts = [
+      this.currentUser.first_name,
+      this.currentUser.last_name
+    ].filter(part => part && part.trim());
+
+    return nameParts.length > 0 ? nameParts.join(' ') : this.currentUser.username;
   }
 
   // Toolbar Actions
@@ -235,31 +415,31 @@ export class AppComponent implements OnInit {
   }
 
   onGenerateCode(): void {
-  if (!this.currentProject) {
-    this.snackBar.open('No project selected', 'Close', { duration: 3000 });
-    return;
-  }
-
-  const generatingSnackBar = this.snackBar.open('Generating code...', '', {
-    duration: 0 // Keep open until dismissed
-  });
-
-  this.flutterProjectService.generateCode().subscribe({
-    next: (result) => {
-      generatingSnackBar.dismiss();
-      this.snackBar.open(`Generated ${result.file_count} files for ${result.project}`, 'Close', {
-        duration: 4000
-      });
-      console.log('Generated files:', result.files);
-    },
-    error: (error) => {
-      generatingSnackBar.dismiss();
-      console.error('Error generating code:', error);
-      const errorMsg = error?.error?.detail || 'Error generating code';
-      this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+    if (!this.currentProject) {
+      this.snackBar.open('No project selected', 'Close', { duration: 3000 });
+      return;
     }
-  });
-}
+
+    const generatingSnackBar = this.snackBar.open('Generating code...', '', {
+      duration: 0
+    });
+
+    this.flutterProjectService.generateCode().subscribe({
+      next: (result) => {
+        generatingSnackBar.dismiss();
+        this.snackBar.open(`Generated ${result.file_count} files for ${result.project}`, 'Close', {
+          duration: 4000
+        });
+        console.log('Generated files:', result.files);
+      },
+      error: (error) => {
+        generatingSnackBar.dismiss();
+        console.error('Error generating code:', error);
+        const errorMsg = error?.error?.detail || 'Error generating code';
+        this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+      }
+    });
+  }
 
   onBuildAPK(): void {
     if (!this.currentProject) return;
@@ -286,7 +466,6 @@ export class AppComponent implements OnInit {
 
     this.flutterProjectService.downloadProject().subscribe({
       next: (blob) => {
-        // Create download link
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -317,16 +496,16 @@ export class AppComponent implements OnInit {
   }
 
   // Screen Management
-onScreenSelected(screen: Screen): void {
-  this.flutterProjectService.setCurrentScreen(screen);
-}
-
-onScreenSelectionChange(screenId: number): void {
-  const screen = this.projectScreens.find(s => s.id === screenId);
-  if (screen) {
-    this.onScreenSelected(screen);
+  onScreenSelected(screen: Screen): void {
+    this.flutterProjectService.setCurrentScreen(screen);
   }
-}
+
+  onScreenSelectionChange(screenId: number): void {
+    const screen = this.projectScreens.find(s => s.id === screenId);
+    if (screen) {
+      this.onScreenSelected(screen);
+    }
+  }
 
   getCurrentScreenName(): string {
     return this.currentScreen?.name || 'No Screen Selected';
