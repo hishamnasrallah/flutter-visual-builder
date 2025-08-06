@@ -1,5 +1,7 @@
 // src/app/shared/models/flutter-project.interface.ts
 
+import { UIComponent } from './ui-component.interface';
+
 export interface FlutterProject {
   id: number;
   name: string;
@@ -22,17 +24,6 @@ export interface LocalVersion {
   lang: string;
   version_number: string;
   active_ind: boolean;
-}
-
-export interface Screen {
-  id: number;
-  project: number;
-  name: string;
-  route: string;
-  is_home: boolean;
-  ui_structure: UIComponent;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface Build {

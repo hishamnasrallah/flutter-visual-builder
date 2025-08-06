@@ -3,28 +3,25 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  // Default route - redirect to builder
+  // Default route - the app component itself handles the builder
   {
     path: '',
-    redirectTo: '/builder',
-    pathMatch: 'full'
+    pathMatch: 'full',
+    redirectTo: '/'  // Just load the main app
   },
 
-  // Builder route (main application) - now loads standalone components
-  {
-    path: 'builder',
-    loadComponent: () => import('./app.component').then(m => m.AppComponent)
-  },
+  // Since AppComponent IS the builder, we don't need separate routing
+  // Remove the builder route that loads AppComponent again
 
-  // Projects management (could be added later)
+  // Future routes can be added here
   // {
   //   path: 'projects',
-  //   loadChildren: () => import('./projects/project.routes').then(m => m.PROJECT_ROUTES)
+  //   loadComponent: () => import('./projects/project-list/project-list.component').then(m => m.ProjectListComponent)
   // },
 
-  // Wildcard route - redirect to builder
+  // Wildcard - stay on main app
   {
     path: '**',
-    redirectTo: '/builder'
+    redirectTo: '/'
   }
 ];

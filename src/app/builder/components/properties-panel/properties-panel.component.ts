@@ -241,7 +241,10 @@ export class PropertiesPanelComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
+  // Add this method to the PropertiesPanelComponent class
+  formatSliderValue(value: number): string {
+    return value.toString();
+  }
   private setupPropertiesForm(): void {
     this.isUpdating = true;
 
