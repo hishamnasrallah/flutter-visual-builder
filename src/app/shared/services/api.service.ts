@@ -1,10 +1,8 @@
-// src/app/shared/services/api.service.ts
-
+// src/app/shared/services/api.service.ts - Updated with config integration
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { ConfigService } from '../../builder/services/config.service';
 import {
   ComponentTemplate,
   OrganizedComponents,
@@ -19,65 +17,58 @@ import {
   providedIn: 'root'
 })
 export class ApiService {
-  private readonly baseUrl = environment.apiUrl;
+  constructor(
+    private http: HttpClient,
+    private configService: ConfigService
+  ) {}
 
-  constructor(private http: HttpClient) {}
+  private getApiUrl(endpoint: string): string {
+    const baseUrl = this.configService.getBaseUrl();
+    if (!baseUrl) {
+      throw new Error('Backend URL not configured. Please configure the backend connection first.');
+    }
+    // Ensure endpoint starts with /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    return `${baseUrl}${normalizedEndpoint}`;
+  }
+
+  // Health check to test connection
+  testConnection(): Observable<any> {
+    return this.http.get(this.getApiUrl('/health/') || this.getApiUrl('/api/health/'));
+  }
 
   // Component Templates APIs
-getOrganizedComponents(): Observable<{ groups: string[]; total_components: number; components: OrganizedComponents }> {
-  return this.http.get<any>(`${this.baseUrl}/api/projects/component-templates/organized/`)
-    .pipe(
-      catchError(this.handleError<any>('getOrganizedComponents'))
-    );
-}
-
-private handleError<T>(operation = 'operation', result?: T) {
-  return (error: any): Observable<T> => {
-    console.error(`${operation} failed:`, error);
-
-    // Log error details for debugging
-    if (error.error) {
-      console.error('Error details:', error.error);
-    }
-
-    // Return safe fallback value
-    return of(result as T);
-  };
-}
+  getOrganizedComponents(): Observable<{ groups: string[]; total_components: number; components: OrganizedComponents }> {
+    return this.http.get<any>(this.getApiUrl('/api/projects/component-templates/organized/'));
+  }
 
   getComponentsForBuilder(category?: string, search?: string): Observable<{ count: number; components: ComponentTemplate[] }> {
     let params = new HttpParams();
     if (category) params = params.set('category', category);
     if (search) params = params.set('search', search);
 
-    return this.http.get<any>(`${this.baseUrl}/api/projects/component-templates/components/`, { params });
+    return this.http.get<any>(this.getApiUrl('/api/projects/component-templates/components/'), { params });
   }
 
   // Flutter Projects APIs
-getFlutterProjects(): Observable<FlutterProject[]> {
-  return this.http.get<FlutterProject[]>(`${this.baseUrl}/api/projects/flutter-projects/`)
-    .pipe(
-      catchError(this.handleError<FlutterProject[]>('getFlutterProjects', []))
-    );
-}
+  getFlutterProjects(): Observable<FlutterProject[]> {
+    return this.http.get<FlutterProject[]>(this.getApiUrl('/api/projects/flutter-projects/'));
+  }
 
-getFlutterProject(id: number): Observable<FlutterProject> {
-  return this.http.get<FlutterProject>(`${this.baseUrl}/api/projects/flutter-projects/${id}/`)
-    .pipe(
-      catchError(this.handleError<FlutterProject>('getFlutterProject'))
-    );
-}
+  getFlutterProject(id: number): Observable<FlutterProject> {
+    return this.http.get<FlutterProject>(this.getApiUrl(`/api/projects/flutter-projects/${id}/`));
+  }
 
   createFlutterProject(project: Partial<FlutterProject>): Observable<FlutterProject> {
-    return this.http.post<FlutterProject>(`${this.baseUrl}/api/projects/flutter-projects/`, project);
+    return this.http.post<FlutterProject>(this.getApiUrl('/api/projects/flutter-projects/'), project);
   }
 
   updateFlutterProject(id: number, project: Partial<FlutterProject>): Observable<FlutterProject> {
-    return this.http.put<FlutterProject>(`${this.baseUrl}/api/projects/flutter-projects/${id}/`, project);
+    return this.http.put<FlutterProject>(this.getApiUrl(`/api/projects/flutter-projects/${id}/`), project);
   }
 
   deleteFlutterProject(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/api/projects/flutter-projects/${id}/`);
+    return this.http.delete<void>(this.getApiUrl(`/api/projects/flutter-projects/${id}/`));
   }
 
   // Screens APIs
@@ -85,44 +76,44 @@ getFlutterProject(id: number): Observable<FlutterProject> {
     let params = new HttpParams();
     if (projectId) params = params.set('project', projectId.toString());
 
-    return this.http.get<Screen[]>(`${this.baseUrl}/api/projects/screens/`, { params });
+    return this.http.get<Screen[]>(this.getApiUrl('/api/projects/screens/'), { params });
   }
 
   getScreen(id: number): Observable<Screen> {
-    return this.http.get<Screen>(`${this.baseUrl}/api/projects/screens/${id}/`);
+    return this.http.get<Screen>(this.getApiUrl(`/api/projects/screens/${id}/`));
   }
 
   createScreen(screen: CreateScreenRequest): Observable<Screen> {
-    return this.http.post<Screen>(`${this.baseUrl}/api/projects/screens/`, screen);
+    return this.http.post<Screen>(this.getApiUrl('/api/projects/screens/'), screen);
   }
 
   updateScreen(id: number, screen: Partial<Screen>): Observable<Screen> {
-    return this.http.put<Screen>(`${this.baseUrl}/api/projects/screens/${id}/`, screen);
+    return this.http.put<Screen>(this.getApiUrl(`/api/projects/screens/${id}/`), screen);
   }
 
   updateScreenUIStructure(id: number, request: UpdateUIStructureRequest): Observable<Screen> {
-    return this.http.put<Screen>(`${this.baseUrl}/api/projects/screens/${id}/update_ui_structure/`, request);
+    return this.http.put<Screen>(this.getApiUrl(`/api/projects/screens/${id}/update_ui_structure/`), request);
   }
 
   setScreenAsHome(id: number): Observable<{ status: string }> {
-    return this.http.post<{ status: string }>(`${this.baseUrl}/api/projects/screens/${id}/set_as_home/`, {});
+    return this.http.post<{ status: string }>(this.getApiUrl(`/api/projects/screens/${id}/set_as_home/`), {});
   }
 
   duplicateScreen(id: number): Observable<Screen> {
-    return this.http.post<Screen>(`${this.baseUrl}/api/projects/screens/${id}/duplicate/`, {});
+    return this.http.post<Screen>(this.getApiUrl(`/api/projects/screens/${id}/duplicate/`), {});
   }
 
   deleteScreen(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/api/projects/screens/${id}/`);
+    return this.http.delete<void>(this.getApiUrl(`/api/projects/screens/${id}/`));
   }
 
   // Code Generation APIs
   generateCode(projectId: number): Observable<{ project: string; files: { [key: string]: string }; file_count: number }> {
-    return this.http.post<any>(`${this.baseUrl}/api/builder/code-generator/generate_code/`, { project_id: projectId });
+    return this.http.post<any>(this.getApiUrl('/api/builder/code-generator/generate_code/'), { project_id: projectId });
   }
 
   downloadProject(projectId: number): Observable<Blob> {
-    return this.http.post(`${this.baseUrl}/api/builder/code-generator/download_project/`,
+    return this.http.post(this.getApiUrl('/api/builder/code-generator/download_project/'),
       { project_id: projectId },
       { responseType: 'blob' }
     );
@@ -134,11 +125,11 @@ getFlutterProject(id: number): Observable<FlutterProject> {
     if (projectId) params = params.set('project', projectId.toString());
     if (status) params = params.set('status', status);
 
-    return this.http.get<Build[]>(`${this.baseUrl}/api/builds/`, { params });
+    return this.http.get<Build[]>(this.getApiUrl('/api/builds/'), { params });
   }
 
   createBuild(projectId: number, buildType: string = 'release', versionNumber: string = '1.0.0', buildNumber: number = 1): Observable<Build> {
-    return this.http.post<Build>(`${this.baseUrl}/api/builds/`, {
+    return this.http.post<Build>(this.getApiUrl('/api/builds/'), {
       project_id: projectId,
       build_type: buildType,
       version_number: versionNumber,
@@ -147,14 +138,44 @@ getFlutterProject(id: number): Observable<FlutterProject> {
   }
 
   getBuild(id: number): Observable<Build> {
-    return this.http.get<Build>(`${this.baseUrl}/api/builds/${id}/`);
+    return this.http.get<Build>(this.getApiUrl(`/api/builds/${id}/`));
   }
 
   downloadBuild(id: number): Observable<Blob> {
-    return this.http.get(`${this.baseUrl}/api/builds/${id}/download/`, { responseType: 'blob' });
+    return this.http.get(this.getApiUrl(`/api/builds/${id}/download/`), { responseType: 'blob' });
   }
 
   cancelBuild(id: number): Observable<{ status: string }> {
-    return this.http.post<{ status: string }>(`${this.baseUrl}/api/builds/${id}/cancel/`, {});
+    return this.http.post<{ status: string }>(this.getApiUrl(`/api/builds/${id}/cancel/`), {});
+  }
+
+  // User profile API
+  getUserProfile(): Observable<any> {
+    return this.http.get(this.getApiUrl('/auth/me/'));
+  }
+
+  // Generic API call method for flexibility
+  call(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', data?: any, options?: any): Observable<any> {
+    const url = this.getApiUrl(endpoint);
+
+    switch (method) {
+      case 'GET':
+        return this.http.get(url, options);
+      case 'POST':
+        return this.http.post(url, data, options);
+      case 'PUT':
+        return this.http.put(url, data, options);
+      case 'DELETE':
+        return this.http.delete(url, options);
+      case 'PATCH':
+        return this.http.patch(url, data, options);
+      default:
+        throw new Error(`Unsupported HTTP method: ${method}`);
+    }
+  }
+
+  // Utility method to check if API is configured
+  isConfigured(): boolean {
+    return this.configService.isConfigured();
   }
 }
