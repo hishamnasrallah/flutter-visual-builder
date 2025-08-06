@@ -71,8 +71,8 @@
                 matInput
                 type="number"
                 [formControlName]="config.key"
-                [min]="config.min"
-                [max]="config.max"
+                [min]="config.min ?? 0"
+                [max]="config.max ?? 999999"
                 [step]="config.step || 1">
             </mat-form-field>
 
@@ -122,7 +122,7 @@
                   [step]="config.step || 1"
                   [displayWith]="formatSliderValue"
                   class="property-slider">
-                  <input matSliderThumb [formControlName]="config.key">
+                  <input matSliderThumb [formControlName]="config.key" #sliderThumb>
                 </mat-slider>
                 <div class="slider-value">
                   {{ propertiesForm.get(config.key)?.value || 0 }}

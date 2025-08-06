@@ -186,37 +186,38 @@ export class LayersPanelComponent implements OnInit, OnDestroy {
   }
 
   getLayerName(component: UIComponent): string {
-    // Try to get a meaningful name
-    if (component.properties.text) {
-      const text = component.properties.text.toString().substring(0, 20);
-      return `${this.getTypeName(component.type)} (${text}${text.length > 20 ? '...' : ''})`;
-    }
-
-    return this.getTypeName(component.type);
+  // Try to get a meaningful name
+  const props = component.properties;
+  if (props['text']) {
+    const text = props['text'].toString().substring(0, 20);
+    return `${this.getTypeName(component.type)} (${text}${text.length > 20 ? '...' : ''})`;
   }
 
-  private getTypeName(type: string): string {
-    return type.charAt(0).toUpperCase() + type.slice(1);
-  }
+  return this.getTypeName(component.type);
+}
+
+  getTypeName(type: string): string {
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
 
   getLayerDescription(component: UIComponent): string {
-    const props = component.properties;
-    const details: string[] = [];
+  const props = component.properties;
+  const details: string[] = [];
 
-    if (props.width || props.height) {
-      details.push(`${props.width || 'auto'} × ${props.height || 'auto'}`);
-    }
-
-    if (props.color) {
-      details.push(props.color);
-    }
-
-    if (component.children && component.children.length > 0) {
-      details.push(`${component.children.length} children`);
-    }
-
-    return details.join(' • ');
+  if (props['width'] || props['height']) {
+    details.push(`${props['width'] || 'auto'} × ${props['height'] || 'auto'}`);
   }
+
+  if (props['color']) {
+    details.push(props['color']);
+  }
+
+  if (component.children && component.children.length > 0) {
+    details.push(`${component.children.length} children`);
+  }
+
+  return details.join(' • ');
+}
 
   // Expand/Collapse all
   expandAll(): void {

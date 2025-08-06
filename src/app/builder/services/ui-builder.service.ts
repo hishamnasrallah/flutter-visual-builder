@@ -271,10 +271,21 @@ export class UiBuilderService {
   }
 
   private adjustPathAfterRemoval(fromPath: number[], toPath: number[]): number[] {
-    // Complex logic to adjust paths when moving elements
-    // This ensures correct positioning after removal
-    return toPath; // Simplified for now
+  // If moving within the same parent
+  if (fromPath.length === toPath.length &&
+      fromPath.slice(0, -1).every((val, i) => val === toPath[i])) {
+
+    const fromIndex = fromPath[fromPath.length - 1];
+    const toIndex = toPath[toPath.length - 1];
+
+    // If moving to a position after the original, adjust for the removal
+    if (toIndex > fromIndex) {
+      return [...toPath.slice(0, -1), toIndex - 1];
+    }
   }
+
+  return toPath;
+}
 
   private pushToHistory(structure: UIComponent): void {
     // Remove any history beyond current index
@@ -293,23 +304,28 @@ export class UiBuilderService {
 
   // Validation
   canDropWidget(targetPath: number[], widgetType: string): boolean {
-    const currentStructure = this.getUIStructure();
-    const target = this.getComponentAtPath(currentStructure, targetPath);
+  const currentStructure = this.getUIStructure();
+  const target = this.getComponentAtPath(currentStructure, targetPath);
 
-    if (!target) return false;
+  if (!target) return false;
 
-    // Check if target can have children
-    const targetCanHaveChildren = this.widgetCanHaveChildren(target.type);
-    if (!targetCanHaveChildren) return false;
+  // Check if target can have children
+  const targetCanHaveChildren = this.widgetCanHaveChildren(target.type);
+  if (!targetCanHaveChildren) return false;
 
-    // Check max children constraint
-    const maxChildren = this.getMaxChildren(target.type);
-    if (maxChildren && target.children && target.children.length >= maxChildren) {
-      return false;
-    }
-
-    return true;
+  // Check max children constraint
+  const maxChildren = this.getMaxChildren(target.type);
+  if (maxChildren !== null && target.children && target.children.length >= maxChildren) {
+    return false;
   }
+
+  // Additional validation for specific widget types
+  if (target.type === 'center' && target.children && target.children.length > 0) {
+    return false; // Center can only have one child
+  }
+
+  return true;
+}
 
   private widgetCanHaveChildren(widgetType: string): boolean {
     const containerTypes = ['container', 'column', 'row', 'stack', 'center', 'padding', 'card'];

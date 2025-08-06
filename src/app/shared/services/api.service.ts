@@ -2,7 +2,8 @@
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   ComponentTemplate,
@@ -23,9 +24,26 @@ export class ApiService {
   constructor(private http: HttpClient) {}
 
   // Component Templates APIs
-  getOrganizedComponents(): Observable<{ groups: string[]; total_components: number; components: OrganizedComponents }> {
-    return this.http.get<any>(`${this.baseUrl}/api/projects/component-templates/organized/`);
-  }
+getOrganizedComponents(): Observable<{ groups: string[]; total_components: number; components: OrganizedComponents }> {
+  return this.http.get<any>(`${this.baseUrl}/api/projects/component-templates/organized/`)
+    .pipe(
+      catchError(this.handleError<any>('getOrganizedComponents'))
+    );
+}
+
+private handleError<T>(operation = 'operation', result?: T) {
+  return (error: any): Observable<T> => {
+    console.error(`${operation} failed:`, error);
+
+    // Log error details for debugging
+    if (error.error) {
+      console.error('Error details:', error.error);
+    }
+
+    // Return safe fallback value
+    return of(result as T);
+  };
+}
 
   getComponentsForBuilder(category?: string, search?: string): Observable<{ count: number; components: ComponentTemplate[] }> {
     let params = new HttpParams();
@@ -36,13 +54,19 @@ export class ApiService {
   }
 
   // Flutter Projects APIs
-  getFlutterProjects(): Observable<FlutterProject[]> {
-    return this.http.get<FlutterProject[]>(`${this.baseUrl}/api/projects/flutter-projects/`);
-  }
+getFlutterProjects(): Observable<FlutterProject[]> {
+  return this.http.get<FlutterProject[]>(`${this.baseUrl}/api/projects/flutter-projects/`)
+    .pipe(
+      catchError(this.handleError<FlutterProject[]>('getFlutterProjects', []))
+    );
+}
 
-  getFlutterProject(id: number): Observable<FlutterProject> {
-    return this.http.get<FlutterProject>(`${this.baseUrl}/api/projects/flutter-projects/${id}/`);
-  }
+getFlutterProject(id: number): Observable<FlutterProject> {
+  return this.http.get<FlutterProject>(`${this.baseUrl}/api/projects/flutter-projects/${id}/`)
+    .pipe(
+      catchError(this.handleError<FlutterProject>('getFlutterProject'))
+    );
+}
 
   createFlutterProject(project: Partial<FlutterProject>): Observable<FlutterProject> {
     return this.http.post<FlutterProject>(`${this.baseUrl}/api/projects/flutter-projects/`, project);

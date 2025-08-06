@@ -20,6 +20,8 @@ export interface ComponentTemplate {
   display_order: number;
   widget_group: string;
   show_in_builder: boolean;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface OrganizedComponents {

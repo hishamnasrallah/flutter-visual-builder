@@ -1,7 +1,7 @@
 // src/app/builder/services/flutter-project.service.ts
 
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, forkJoin, map, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, forkJoin, map, switchMap, catchError, of } from 'rxjs';
 import { ApiService } from '../../shared/services/api.service';
 import { FlutterProject, Screen, CreateScreenRequest } from '../../shared/models';
 

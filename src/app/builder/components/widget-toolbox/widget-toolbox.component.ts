@@ -22,6 +22,9 @@ import { WidgetLibraryService } from '../../services/widget-library.service';
 import { UiBuilderService } from '../../services/ui-builder.service';
 import { ComponentTemplate, WidgetGroup } from '../../../shared/models';
 
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, forkJoin, map, switchMap, catchError, of } from 'rxjs';
+
 @Component({
   selector: 'app-widget-toolbox',
   standalone: true,

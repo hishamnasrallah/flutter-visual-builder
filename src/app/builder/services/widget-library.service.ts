@@ -1,7 +1,7 @@
 // src/app/builder/services/widget-library.service.ts
 
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map } from 'rxjs';
+import { BehaviorSubject, Observable, map, catchError, of } from 'rxjs';
 import { ApiService } from '../../shared/services/api.service';
 import { ComponentTemplate, WidgetGroup, OrganizedComponents } from '../../shared/models';
 
@@ -16,24 +16,30 @@ export class WidgetLibraryService {
   public loading$ = this.loadingSubject.asObservable();
 
   constructor(private apiService: ApiService) {
-    this.loadWidgets();
-  }
+  this.loadWidgets();
+}
 
-  loadWidgets(): void {
-    this.loadingSubject.next(true);
+loadWidgets(): void {
+  this.loadingSubject.next(true);
 
-    this.apiService.getOrganizedComponents().subscribe({
-      next: (response) => {
+  this.apiService.getOrganizedComponents().subscribe({
+    next: (response) => {
+      if (response && response.components) {
         const widgetGroups = this.transformToWidgetGroups(response.components);
         this.widgetGroupsSubject.next(widgetGroups);
-        this.loadingSubject.next(false);
-      },
-      error: (error) => {
-        console.error('Error loading widgets:', error);
-        this.loadingSubject.next(false);
+      } else {
+        console.warn('No components received from API');
+        this.widgetGroupsSubject.next([]);
       }
-    });
-  }
+      this.loadingSubject.next(false);
+    },
+    error: (error) => {
+      console.error('Error loading widgets:', error);
+      this.widgetGroupsSubject.next([]);
+      this.loadingSubject.next(false);
+    }
+  });
+}
 
   private transformToWidgetGroups(organizedComponents: OrganizedComponents): WidgetGroup[] {
     return Object.keys(organizedComponents).map(groupName => ({
@@ -48,9 +54,15 @@ export class WidgetLibraryService {
   }
 
   searchWidgets(searchTerm: string): Observable<ComponentTemplate[]> {
-    return this.apiService.getComponentsForBuilder(undefined, searchTerm)
-      .pipe(map(response => response.components));
-  }
+  return this.apiService.getComponentsForBuilder(undefined, searchTerm)
+    .pipe(
+      map(response => response.components || []),
+      catchError(error => {
+        console.error('Error searching widgets:', error);
+        return of([]);
+      })
+    );
+}
 
   getWidgetByType(type: string): Observable<ComponentTemplate | undefined> {
     return this.widgetGroups$.pipe(
@@ -65,12 +77,44 @@ export class WidgetLibraryService {
   }
 
   createDefaultUIComponent(template: ComponentTemplate): any {
-    return {
-      type: template.flutter_widget.toLowerCase(),
-      properties: { ...template.default_properties },
-      children: []
-    };
-  }
+  // Create a deep copy of default properties to avoid mutations
+  const defaultProps = JSON.parse(JSON.stringify(template.default_properties || {}));
+
+  return {
+    type: template.flutter_widget.toLowerCase(),
+    properties: {
+      ...defaultProps,
+      // Ensure common properties have defaults
+      ...this.getCommonDefaults(template.flutter_widget.toLowerCase())
+    },
+    children: []
+  };
+}
+
+private getCommonDefaults(widgetType: string): any {
+  const commonDefaults: { [key: string]: any } = {
+    text: {
+      text: 'Text',
+      fontSize: 16,
+      color: '#000000'
+    },
+    container: {
+      width: null,
+      height: null,
+      padding: { all: 8 }
+    },
+    button: {
+      text: 'Button'
+    },
+    icon: {
+      icon: 'star',
+      size: 24,
+      color: '#000000'
+    }
+  };
+
+  return commonDefaults[widgetType] || {};
+}
 
   toggleGroupExpansion(groupName: string): void {
     const currentGroups = this.widgetGroupsSubject.value;

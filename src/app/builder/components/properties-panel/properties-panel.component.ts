@@ -14,6 +14,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { FormsModule } from '@angular/forms'; // Add FormsModule for ngModel
 
 // Services and Models
 import { UiBuilderService, SelectedElement } from '../../services/ui-builder.service';
@@ -32,18 +33,19 @@ interface PropertyConfig {
 @Component({
   selector: 'app-properties-panel',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatCheckboxModule,
-    MatSliderModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTooltipModule
-  ],
+imports: [
+  CommonModule,
+  ReactiveFormsModule,
+  FormsModule,
+  MatFormFieldModule,
+  MatInputModule,
+  MatSelectModule,
+  MatCheckboxModule,
+  MatSliderModule,
+  MatButtonModule,
+  MatIconModule,
+  MatTooltipModule
+],
   templateUrl: './properties-panel.component.html',
   styleUrls: ['./properties-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -289,48 +291,75 @@ export class PropertiesPanelComponent implements OnInit, OnDestroy {
   }
 
   private getPropertyValue(properties: any, key: string): any {
-    return properties[key];
+  const value = properties[key];
+
+  // Handle nested object properties like padding.all
+  if (key === 'padding' || key === 'margin') {
+    if (typeof value === 'object' && value?.all !== undefined) {
+      return value.all;
+    }
+    return value;
   }
 
-  private getDefaultValue(config: PropertyConfig): any {
-    switch (config.type) {
-      case 'boolean':
-        return false;
-      case 'number':
-      case 'slider':
-        return config.min || 0;
-      case 'select':
-        return config.options?.[0]?.value;
-      default:
-        return '';
-    }
+  return value;
+}
+
+private getDefaultValue(config: PropertyConfig): any {
+  switch (config.type) {
+    case 'boolean':
+      return false;
+    case 'number':
+    case 'slider':
+      return config.min || 0;
+    case 'select':
+      return config.options?.[0]?.value || '';
+    case 'color':
+      return '#000000';
+    default:
+      return '';
   }
+}
 
   private updateElementProperties(formValues: any): void {
-    if (!this.selectedElement) return;
+  if (!this.selectedElement) return;
 
-    const updates: { [key: string]: any } = {};
+  const updates: { [key: string]: any } = {};
 
-    Object.keys(formValues).forEach(key => {
-      const config = this.propertyConfigs.find(c => c.key === key);
-      let value = formValues[key];
+  Object.keys(formValues).forEach(key => {
+    const config = this.propertyConfigs.find(c => c.key === key);
+    let value = formValues[key];
 
-      // Handle special transformations
-      if (config) {
-        if (config.key === 'padding' || config.key === 'margin') {
-          value = { all: value };
-        }
+    if (!config) return;
 
-        // Skip empty values for optional properties
-        if (value !== null && value !== undefined && value !== '') {
-          updates[key] = value;
-        }
+    // Handle special transformations
+    if (config.key === 'padding' || config.key === 'margin') {
+      if (typeof value === 'number' && value >= 0) {
+        value = { all: value };
+      } else {
+        return; // Skip invalid padding/margin values
       }
-    });
+    }
 
+    // Handle color values
+    if (config.type === 'color') {
+      if (!value || (!value.startsWith('#') && !value.toLowerCase().startsWith('rgb'))) {
+        return; // Skip invalid colors
+      }
+    }
+
+    // Include the value (don't skip empty strings for some properties like text)
+    if (value !== null && value !== undefined) {
+      if (config.type === 'text' || value !== '') {
+        updates[key] = value;
+      }
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
     // Update the element properties
     this.uiBuilderService.updateWidgetProperties(this.selectedElement.path, updates);
   }
+}
 
   // Reset properties to default
   resetProperties(): void {

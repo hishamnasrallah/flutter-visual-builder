@@ -4,6 +4,7 @@
      (click)="onCanvasClick($event)"
      cdkDropList
      [cdkDropListData]="{path: []}"
+     cdkDropListSortingDisabled="false"
      (cdkDropListDropped)="onDrop($event)"
      (cdkDropListEntered)="onDragEnter($event, [])"
      (cdkDropListExited)="onDragExit($event)">

@@ -13,7 +13,7 @@
           matInput
           placeholder="Search widgets..."
           [(ngModel)]="searchTerm"
-          (input)="onSearchChange($event.target?.value || '')"
+          (input)="onSearchChange(searchTerm)"
           autocomplete="off">
         <button
           mat-icon-button
@@ -55,7 +55,7 @@
     <!-- Search Results -->
     <div class="search-results" *ngIf="isSearching">
       <div class="results-header">
-        <span class="results-count">{{filteredComponents.length}} results</span>
+        <span class="results-count">{{ filteredComponents.length }} results</span>
         <button mat-stroked-button size="small" (click)="clearSearch()">
           Show all
         </button>
@@ -73,9 +73,9 @@
           [attr.title]="component.description">
 
           <div class="widget-icon">
-            <mat-icon>{{component.icon}}</mat-icon>
+            <mat-icon>{{ component.icon }}</mat-icon>
           </div>
-          <div class="widget-name">{{component.name}}</div>
+          <div class="widget-name">{{ component.name }}</div>
         </div>
       </div>
     </div>
@@ -91,10 +91,10 @@
           <mat-expansion-panel-header>
             <mat-panel-title>
               <mat-icon class="group-icon">widgets</mat-icon>
-              {{group.name}}
+              {{ group.name }}
             </mat-panel-title>
             <mat-panel-description>
-              {{group.components.length}} widgets
+              {{ group.components.length }} widgets
             </mat-panel-description>
           </mat-expansion-panel-header>
 
@@ -110,9 +110,9 @@
               [attr.title]="component.description">
 
               <div class="widget-icon">
-                <mat-icon>{{component.icon}}</mat-icon>
+                <mat-icon>{{ component.icon }}</mat-icon>
               </div>
-              <div class="widget-name">{{component.name}}</div>
+              <div class="widget-name">{{ component.name }}</div>
             </div>
           </div>
 

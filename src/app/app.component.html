@@ -148,7 +148,7 @@
                 <mat-label>Current Screen</mat-label>
                 <mat-select
                   [value]="currentScreen?.id"
-                  (selectionChange)="onScreenSelected(projectScreens.find(s => s.id === $event.value)!)">
+                  (selectionChange)="onScreenSelectionChange($event.value)">
                   <mat-option
                     *ngFor="let screen of projectScreens"
                     [value]="screen.id">

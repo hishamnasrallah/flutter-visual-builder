@@ -98,21 +98,32 @@ export class BuilderCanvasComponent implements OnInit, OnDestroy {
 
   // Drop Events
   onDrop(event: CdkDragDrop<any>, targetPath: number[] = []): void {
-    event.preventDefault();
+  if (this.draggedElement) {
+    // Adding new widget from toolbox
+    this.uiBuilderService.addWidget(this.draggedElement, targetPath);
+    this.uiBuilderService.setDraggedElement(null);
+  } else if (event.previousContainer !== event.container) {
+    // Moving widget between containers
+    const dragData = event.item.data;
+    if (dragData && dragData.component && dragData.path) {
+      this.uiBuilderService.moveWidget(dragData.path, targetPath);
+    }
+  } else {
+    // Reordering within same container
+    const dragData = event.item.data;
+    if (dragData && dragData.component && dragData.path) {
+      // Calculate new position based on current index
+      const newPath = [...targetPath, event.currentIndex];
+      const oldPath = [...targetPath, event.previousIndex];
 
-    if (this.draggedElement) {
-      // Adding new widget from toolbox
-      this.uiBuilderService.addWidget(this.draggedElement, targetPath);
-    } else if (event.previousContainer !== event.container) {
-      // Moving widget between containers
-      const dragData = event.previousContainer.data;
-      if (dragData && dragData.component && dragData.path) {
-        this.uiBuilderService.moveWidget(dragData.path, targetPath);
+      if (event.currentIndex !== event.previousIndex) {
+        this.uiBuilderService.moveWidget(oldPath, newPath);
       }
     }
-
-    this.clearDropTarget();
   }
+
+  this.clearDropTarget();
+}
 
   onDragEnter(event: CdkDragEnter, targetPath: number[]): void {
     if (this.canDropAtPath(targetPath)) {
@@ -162,68 +173,76 @@ export class BuilderCanvasComponent implements OnInit, OnDestroy {
   }
 
   getElementStyles(component: UIComponent): { [key: string]: string } {
-    const styles: { [key: string]: string } = {};
+  const styles: { [key: string]: string } = {};
+  const props = component.properties;
 
-    // Apply width and height
-    if (component.properties.width) {
-      styles['width'] = component.properties.width + 'px';
-    }
-    if (component.properties.height) {
-      styles['height'] = component.properties.height + 'px';
-    }
-
-    // Apply background color
-    if (component.properties.color) {
-      styles['background-color'] = component.properties.color;
-    }
-
-    // Apply padding
-    if (component.properties.padding) {
-      if (typeof component.properties.padding === 'object' && component.properties.padding.all) {
-        styles['padding'] = component.properties.padding.all + 'px';
-      }
-    }
-
-    // Apply margin
-    if (component.properties.margin) {
-      if (typeof component.properties.margin === 'object' && component.properties.margin.all) {
-        styles['margin'] = component.properties.margin.all + 'px';
-      }
-    }
-
-    return styles;
+  // Apply width and height
+  if (props['width']) {
+    styles['width'] = props['width'] + 'px';
   }
+  if (props['height']) {
+    styles['height'] = props['height'] + 'px';
+  }
+
+  // Apply background color
+  if (props['color']) {
+    styles['background-color'] = props['color'];
+  }
+
+  // Apply padding
+  if (props['padding']) {
+    if (typeof props['padding'] === 'object' && props['padding'].all) {
+      styles['padding'] = props['padding'].all + 'px';
+    }
+  }
+
+  // Apply margin
+  if (props['margin']) {
+    if (typeof props['margin'] === 'object' && props['margin'].all) {
+      styles['margin'] = props['margin'].all + 'px';
+    }
+  }
+
+  return styles;
+}
 
   getElementClasses(component: UIComponent, path: number[]): string[] {
-    const classes = ['canvas-element', `canvas-${component.type}`];
+  const classes = ['canvas-element', `canvas-${component.type}`];
 
-    if (this.isElementSelected(path)) {
-      classes.push('selected');
-    }
-
-    if (this.isDropTargetAtPath(path)) {
-      classes.push('drop-target');
-    }
-
-    return classes;
+  if (this.isElementSelected(path)) {
+    classes.push('selected');
   }
+
+  if (this.isDropTargetAtPath(path)) {
+    classes.push('drop-target');
+  }
+
+  // Add hover class for better UX
+  if (component.type === 'container' && (!component.children || component.children.length === 0)) {
+    classes.push('empty-container');
+  }
+
+  return classes;
+}
 
   getDisplayText(component: UIComponent): string {
-    if (component.properties.text) {
-      return component.properties.text;
-    }
+  const props = component.properties;
 
-    switch (component.type.toLowerCase()) {
-      case 'text':
-        return component.properties.text || 'Text';
-      case 'button':
-        return component.properties.text || 'Button';
-      case 'container':
-        return component.children?.length ? '' : 'Container';
-      default:
-        return component.type;
-    }
+  if (props['text']) {
+    return props['text'];
   }
+
+  switch (component.type.toLowerCase()) {
+    case 'text':
+      return props['text'] || 'Text';
+    case 'button':
+      return props['text'] || 'Button';
+    case 'container':
+      return component.children?.length ? '' : 'Container';
+    default:
+      return component.type;
+  }
+}
 
   private arraysEqual(a: number[], b: number[]): boolean {
     if (a.length !== b.length) return false;

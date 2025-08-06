@@ -17,6 +17,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 // Angular CDK
 import { LayoutModule, BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
@@ -40,7 +42,6 @@ import { Observable, map, shareReplay } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    RouterOutlet,
     ReactiveFormsModule,
     FormsModule,
 
@@ -75,11 +76,7 @@ export class AppComponent implements OnInit {
 
   title = 'Flutter Visual Builder';
 
-  isHandset$: Observable<boolean> = this.breakpointObserver.observe(Breakpoints.Handset)
-    .pipe(
-      map(result => result.matches),
-      shareReplay()
-    );
+  isHandset$!: Observable<boolean>;
 
   // Panel visibility
   showPropertiesPanel = true;
@@ -92,11 +89,17 @@ export class AppComponent implements OnInit {
   projectScreens: Screen[] = [];
 
   constructor(
-    private breakpointObserver: BreakpointObserver,
-    private flutterProjectService: FlutterProjectService,
-    private uiBuilderService: UiBuilderService,
-    private snackBar: MatSnackBar
-  ) {}
+  private breakpointObserver: BreakpointObserver,
+  private flutterProjectService: FlutterProjectService,
+  private uiBuilderService: UiBuilderService,
+  private snackBar: MatSnackBar
+) {
+  this.isHandset$ = this.breakpointObserver.observe(Breakpoints.Handset)
+    .pipe(
+      map(result => result.matches),
+      shareReplay()
+    );
+}
 
   // ... rest of your existing component logic stays the same
   ngOnInit(): void {
@@ -232,21 +235,31 @@ export class AppComponent implements OnInit {
   }
 
   onGenerateCode(): void {
-    if (!this.currentProject) return;
-
-    this.flutterProjectService.generateCode().subscribe({
-      next: (result) => {
-        this.snackBar.open(`Generated ${result.file_count} files for ${result.project}`, 'Close', {
-          duration: 4000
-        });
-        console.log('Generated files:', result.files);
-      },
-      error: (error) => {
-        console.error('Error generating code:', error);
-        this.snackBar.open('Error generating code', 'Close', { duration: 3000 });
-      }
-    });
+  if (!this.currentProject) {
+    this.snackBar.open('No project selected', 'Close', { duration: 3000 });
+    return;
   }
+
+  const generatingSnackBar = this.snackBar.open('Generating code...', '', {
+    duration: 0 // Keep open until dismissed
+  });
+
+  this.flutterProjectService.generateCode().subscribe({
+    next: (result) => {
+      generatingSnackBar.dismiss();
+      this.snackBar.open(`Generated ${result.file_count} files for ${result.project}`, 'Close', {
+        duration: 4000
+      });
+      console.log('Generated files:', result.files);
+    },
+    error: (error) => {
+      generatingSnackBar.dismiss();
+      console.error('Error generating code:', error);
+      const errorMsg = error?.error?.detail || 'Error generating code';
+      this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+    }
+  });
+}
 
   onBuildAPK(): void {
     if (!this.currentProject) return;
@@ -304,9 +317,16 @@ export class AppComponent implements OnInit {
   }
 
   // Screen Management
-  onScreenSelected(screen: Screen): void {
-    this.flutterProjectService.setCurrentScreen(screen);
+onScreenSelected(screen: Screen): void {
+  this.flutterProjectService.setCurrentScreen(screen);
+}
+
+onScreenSelectionChange(screenId: number): void {
+  const screen = this.projectScreens.find(s => s.id === screenId);
+  if (screen) {
+    this.onScreenSelected(screen);
   }
+}
 
   getCurrentScreenName(): string {
     return this.currentScreen?.name || 'No Screen Selected';

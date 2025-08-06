@@ -132,9 +132,9 @@
         <span class="info-value">{{ selectedElement.component.children.length }}</span>
       </div>
 
-      <div class="info-row" *ngIf="selectedElement.component.properties.text">
+      <div class="info-row" *ngIf="selectedElement.component.properties['text']">
         <span class="info-label">Text:</span>
-        <span class="info-value">{{ selectedElement.component.properties.text }}</span>
+        <span class="info-value">{{ selectedElement.component.properties['text'] }}</span>
       </div>
     </div>
   </div>

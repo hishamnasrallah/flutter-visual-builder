@@ -1,22 +1,22 @@
 // src/app/builder/components/preview-panel/preview-panel.component.ts
 
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import {Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {Subject, takeUntil} from 'rxjs';
 
 // Angular Material
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
 
 // Services and Models
-import { UiBuilderService } from '../../services/ui-builder.service';
-import { FlutterProjectService } from '../../services/flutter-project.service';
-import { ApiService } from '../../../shared/services/api.service';
-import { UIComponent, FlutterProject, Screen } from '../../../shared/models';
+import {UiBuilderService} from '../../services/ui-builder.service';
+import {FlutterProjectService} from '../../services/flutter-project.service';
+import {ApiService} from '../../../shared/services/api.service';
+import {UIComponent, FlutterProject, Screen} from '../../../shared/models';
 
 @Component({
   selector: 'app-preview-panel',
@@ -58,7 +58,8 @@ export class PreviewPanelComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) {
+  }
 
   ngOnInit(): void {
     // Subscribe to UI structure changes
@@ -110,23 +111,24 @@ export class PreviewPanelComponent implements OnInit, OnDestroy {
   // Get device dimensions
   getDeviceDimensions(): { width: number; height: number } {
     const dimensions = {
-      mobile: { width: 375, height: 667 }, // iPhone dimensions
-      tablet: { width: 768, height: 1024 }, // iPad dimensions
-      desktop: { width: 1024, height: 768 }
+      mobile: {width: 375, height: 667}, // iPhone dimensions
+      tablet: {width: 768, height: 1024}, // iPad dimensions
+      desktop: {width: 1200, height: 800} // Better desktop dimensions
     };
 
-    let { width, height } = dimensions[this.deviceType];
+    const deviceDimensions = dimensions[this.deviceType];
+    let {width, height} = deviceDimensions;
 
     if (this.orientation === 'landscape' && this.deviceType !== 'desktop') {
       [width, height] = [height, width];
     }
 
-    return { width, height };
+    return {width, height};
   }
 
   // Preview styles
   getPreviewStyles(): { [key: string]: string } {
-    const { width, height } = this.getDeviceDimensions();
+    const {width, height} = this.getDeviceDimensions();
 
     return {
       'width': width + 'px',
@@ -159,7 +161,10 @@ export class PreviewPanelComponent implements OnInit, OnDestroy {
 
   // Code generation
   generateCode(): void {
-    if (!this.currentProject) return;
+    if (!this.currentProject) {
+      this.snackBar.open('No project selected', 'Close', {duration: 3000});
+      return;
+    }
 
     this.isGenerating = true;
     this.cdr.markForCheck();
@@ -168,32 +173,47 @@ export class PreviewPanelComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
-          // Get the main screen file
-          const screenFileName = Object.keys(result.files).find(key =>
-            key.includes('screens/') && key.endsWith('.dart')
-          );
+          if (result && result.files) {
+            // Get the main screen file or main.dart
+            let screenFileName = Object.keys(result.files).find(key =>
+              key.includes('screens/') && key.endsWith('.dart')
+            );
 
-          if (screenFileName) {
-            this.generatedCode = result.files[screenFileName];
+            if (!screenFileName) {
+              screenFileName = Object.keys(result.files).find(key =>
+                key.endsWith('main.dart')
+              );
+            }
+
+            if (screenFileName) {
+              this.generatedCode = result.files[screenFileName];
+            } else {
+              // Show first dart file if no screen or main found
+              const dartFile = Object.keys(result.files).find(key => key.endsWith('.dart'));
+              this.generatedCode = dartFile ? result.files[dartFile] : 'No Dart code generated';
+            }
+
+            this.codeVisible = true;
+            this.snackBar.open(`Generated ${result.file_count} files`, 'Close', {
+              duration: 3000
+            });
           } else {
-            this.generatedCode = 'No screen code generated';
+            this.generatedCode = 'No code generated';
+            this.snackBar.open('No code was generated', 'Close', {duration: 3000});
           }
 
           this.isGenerating = false;
-          this.codeVisible = true;
           this.cdr.markForCheck();
-
-          this.snackBar.open(`Generated ${result.file_count} files`, 'Close', {
-            duration: 3000
-          });
         },
         error: (error) => {
           console.error('Error generating code:', error);
           this.isGenerating = false;
+          this.generatedCode = '';
           this.cdr.markForCheck();
 
-          this.snackBar.open('Error generating code', 'Close', {
-            duration: 3000
+          const errorMsg = error?.error?.detail || 'Error generating code';
+          this.snackBar.open(errorMsg, 'Close', {
+            duration: 5000
           });
         }
       });
@@ -217,24 +237,25 @@ export class PreviewPanelComponent implements OnInit, OnDestroy {
   // Helper methods for rendering
   getElementPreviewStyles(component: UIComponent): { [key: string]: string } {
     const styles: { [key: string]: string } = {};
+    const props = component.properties;
 
-    if (component.properties.width) {
-      styles['width'] = component.properties.width + 'px';
+    if (props['width']) {
+      styles['width'] = props['width'] + 'px';
     }
-    if (component.properties.height) {
-      styles['height'] = component.properties.height + 'px';
+    if (props['height']) {
+      styles['height'] = props['height'] + 'px';
     }
-    if (component.properties.color) {
-      styles['background-color'] = component.properties.color;
+    if (props['color']) {
+      styles['background-color'] = props['color'];
     }
-    if (component.properties.padding && typeof component.properties.padding === 'object') {
-      if (component.properties.padding.all) {
-        styles['padding'] = component.properties.padding.all + 'px';
+    if (props['padding'] && typeof props['padding'] === 'object') {
+      if (props['padding'].all) {
+        styles['padding'] = props['padding'].all + 'px';
       }
     }
-    if (component.properties.margin && typeof component.properties.margin === 'object') {
-      if (component.properties.margin.all) {
-        styles['margin'] = component.properties.margin.all + 'px';
+    if (props['margin'] && typeof props['margin'] === 'object') {
+      if (props['margin'].all) {
+        styles['margin'] = props['margin'].all + 'px';
       }
     }
 
@@ -242,27 +263,28 @@ export class PreviewPanelComponent implements OnInit, OnDestroy {
   }
 
   getTextStyles(component: UIComponent): { [key: string]: string } {
-    const styles: { [key: string]: string } = {};
+  const styles: { [key: string]: string } = {};
+  const props = component.properties;
 
-    if (component.properties.fontSize) {
-      styles['font-size'] = component.properties.fontSize + 'px';
-    }
-    if (component.properties.color) {
-      styles['color'] = component.properties.color;
-    }
-    if (component.properties.textAlign) {
-      styles['text-align'] = component.properties.textAlign;
-    }
-    if (component.properties.fontWeight) {
-      styles['font-weight'] = component.properties.fontWeight;
-    }
-
-    return styles;
+  if (props['fontSize']) {
+    styles['font-size'] = props['fontSize'] + 'px';
   }
+  if (props['color']) {
+    styles['color'] = props['color'];
+  }
+  if (props['textAlign']) {
+    styles['text-align'] = props['textAlign'];
+  }
+  if (props['fontWeight']) {
+    styles['font-weight'] = props['fontWeight'];
+  }
+
+  return styles;
+}
 
   getDisplayText(component: UIComponent): string {
-    return component.properties.text || component.type;
-  }
+  return component.properties['text'] || component.type;
+}
 
   // Track function for ngFor
   trackChild(index: number, child: UIComponent): string {
