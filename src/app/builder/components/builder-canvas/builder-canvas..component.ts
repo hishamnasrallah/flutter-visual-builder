@@ -1,18 +1,37 @@
 // src/app/builder/components/builder-canvas/builder-canvas.component.ts
 
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
-import { CdkDragDrop, CdkDragEnter, CdkDragExit } from '@angular/cdk/drag-drop';
+
+// Angular Material
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+// Angular CDK
+import { CdkDragDrop, CdkDragEnter, CdkDragExit, DragDropModule } from '@angular/cdk/drag-drop';
+
+// Services and Models
 import { UiBuilderService, SelectedElement } from '../../services/ui-builder.service';
 import { UIComponent } from '../../../shared/models';
 
 @Component({
   selector: 'app-builder-canvas',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule,
+    DragDropModule
+  ],
   templateUrl: './builder-canvas.component.html',
   styleUrls: ['./builder-canvas.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BuilderCanvasComponent implements OnInit, OnDestroy {
+  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   uiStructure: UIComponent | null = null;

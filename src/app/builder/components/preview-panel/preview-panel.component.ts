@@ -1,20 +1,41 @@
 // src/app/builder/components/preview-panel/preview-panel.component.ts
 
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
+
+// Angular Material
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+// Services and Models
 import { UiBuilderService } from '../../services/ui-builder.service';
 import { FlutterProjectService } from '../../services/flutter-project.service';
 import { ApiService } from '../../../shared/services/api.service';
 import { UIComponent, FlutterProject, Screen } from '../../../shared/models';
-import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-preview-panel',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    MatButtonToggleModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    MatSnackBarModule
+  ],
   templateUrl: './preview-panel.component.html',
   styleUrls: ['./preview-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PreviewPanelComponent implements OnInit, OnDestroy {
+  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   uiStructure: UIComponent | null = null;

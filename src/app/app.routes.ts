@@ -1,9 +1,8 @@
-// src/app/app-routing.module.ts
+// src/app/app.routes.ts
 
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 
-const routes: Routes = [
+export const routes: Routes = [
   // Default route - redirect to builder
   {
     path: '',
@@ -11,16 +10,16 @@ const routes: Routes = [
     pathMatch: 'full'
   },
 
-  // Builder route (main application)
+  // Builder route (main application) - now loads standalone components
   {
     path: 'builder',
-    loadChildren: () => import('./builder/builder.module').then(m => m.BuilderModule)
+    loadComponent: () => import('./app.component').then(m => m.AppComponent)
   },
 
   // Projects management (could be added later)
   // {
   //   path: 'projects',
-  //   loadChildren: () => import('./projects/projects.module').then(m => m.ProjectsModule)
+  //   loadChildren: () => import('./projects/project.routes').then(m => m.PROJECT_ROUTES)
   // },
 
   // Wildcard route - redirect to builder
@@ -29,14 +28,3 @@ const routes: Routes = [
     redirectTo: '/builder'
   }
 ];
-
-@NgModule({
-  imports: [RouterModule.forRoot(routes, {
-    // Enable router tracing for development
-    enableTracing: false,
-    // Use hash location strategy if needed
-    // useHash: true
-  })],
-  exports: [RouterModule]
-})
-export class AppRoutingModule { }

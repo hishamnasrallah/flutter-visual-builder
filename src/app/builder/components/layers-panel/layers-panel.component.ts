@@ -1,7 +1,15 @@
 // src/app/builder/components/layers-panel/layers-panel.component.ts
 
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
+
+// Angular Material
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+// Services and Models
 import { UiBuilderService, SelectedElement } from '../../services/ui-builder.service';
 import { UIComponent } from '../../../shared/models';
 
@@ -16,11 +24,19 @@ interface LayerNode {
 
 @Component({
   selector: 'app-layers-panel',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule
+  ],
   templateUrl: './layers-panel.component.html',
   styleUrls: ['./layers-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayersPanelComponent implements OnInit, OnDestroy {
+  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   layers: LayerNode[] = [];

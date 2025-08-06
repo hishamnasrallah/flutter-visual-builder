@@ -1,8 +1,21 @@
 // src/app/builder/components/properties-panel/properties-panel.component.ts
 
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+
+// Angular Material
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+// Services and Models
 import { UiBuilderService, SelectedElement } from '../../services/ui-builder.service';
 import { UIComponent } from '../../../shared/models';
 
@@ -18,11 +31,25 @@ interface PropertyConfig {
 
 @Component({
   selector: 'app-properties-panel',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatCheckboxModule,
+    MatSliderModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule
+  ],
   templateUrl: './properties-panel.component.html',
   styleUrls: ['./properties-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PropertiesPanelComponent implements OnInit, OnDestroy {
+  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   selectedElement: SelectedElement | null = null;

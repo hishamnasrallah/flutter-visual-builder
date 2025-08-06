@@ -1,16 +1,72 @@
 // src/app/app.component.ts
 
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { MatSidenav } from '@angular/material/sidenav';
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { Observable, map, shareReplay } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { RouterOutlet } from '@angular/router';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+
+// Angular Material Imports
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+
+// Angular CDK
+import { LayoutModule, BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+
+// App Components
+import { WidgetToolboxComponent } from './builder/components/widget-toolbox/widget-toolbox.component';
+import { BuilderCanvasComponent } from './builder/components/builder-canvas/builder-canvas.component';
+import { PropertiesPanelComponent } from './builder/components/properties-panel/properties-panel.component';
+import { LayersPanelComponent } from './builder/components/layers-panel/layers-panel.component';
+import { PreviewPanelComponent } from './builder/components/preview-panel/preview-panel.component';
+
+// Services
 import { FlutterProjectService } from './builder/services/flutter-project.service';
 import { UiBuilderService } from './builder/services/ui-builder.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { FlutterProject, Screen } from './shared/models';
+
+import { Observable, map, shareReplay } from 'rxjs';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    ReactiveFormsModule,
+    FormsModule,
+
+    // Material Modules
+    MatSidenavModule,
+    MatToolbarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatTabsModule,
+    MatDividerModule,
+    MatMenuModule,
+    MatSnackBarModule,
+    MatButtonToggleModule,
+
+    // CDK Modules
+    LayoutModule,
+
+    // App Components
+    WidgetToolboxComponent,
+    BuilderCanvasComponent,
+    PropertiesPanelComponent,
+    LayersPanelComponent,
+    PreviewPanelComponent
+  ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
@@ -42,6 +98,7 @@ export class AppComponent implements OnInit {
     private snackBar: MatSnackBar
   ) {}
 
+  // ... rest of your existing component logic stays the same
   ngOnInit(): void {
     // Subscribe to current project
     this.flutterProjectService.currentProject$.subscribe(project => {

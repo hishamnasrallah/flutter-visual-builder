@@ -1,18 +1,47 @@
 // src/app/builder/components/widget-toolbox/widget-toolbox.component.ts
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
-import { CdkDragStart, CdkDragEnd } from '@angular/cdk/drag-drop';
+
+// Angular Material Imports
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+// Angular CDK
+import { CdkDragStart, CdkDragEnd, DragDropModule } from '@angular/cdk/drag-drop';
+
+// Services and Models
 import { WidgetLibraryService } from '../../services/widget-library.service';
 import { UiBuilderService } from '../../services/ui-builder.service';
 import { ComponentTemplate, WidgetGroup } from '../../../shared/models';
 
 @Component({
   selector: 'app-widget-toolbox',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    MatExpansionModule,
+    MatTooltipModule,
+    DragDropModule
+  ],
   templateUrl: './widget-toolbox.component.html',
   styleUrls: ['./widget-toolbox.component.scss']
 })
 export class WidgetToolboxComponent implements OnInit, OnDestroy {
+  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   widgetGroups: WidgetGroup[] = [];
