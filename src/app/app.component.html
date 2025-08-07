@@ -1,5 +1,6 @@
 <!-- src/app/app.component.html - Simplified Layout -->
-<div class="app-container" *ngIf="isHandset$ | async as isHandset">
+<div class="app-container">
+  <ng-container *ngIf="{isHandset: (isHandset$ | async)} as data">
 
   <!-- SPECIAL ROUTES: Config and Login pages -->
   <router-outlet *ngIf="!showMainToolbar"></router-outlet>
@@ -14,7 +15,7 @@
         aria-label="Toggle sidenav"
         mat-icon-button
         (click)="drawer?.toggle()"
-        *ngIf="isHandset">
+        *ngIf="data.isHandset">
         <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
       </button>
 
@@ -88,7 +89,7 @@
         </mat-menu>
 
         <!-- Panel Toggles -->
-        <div class="panel-toggles" *ngIf="!isHandset">
+        <div class="panel-toggles" *ngIf="!data.isHandset">
           <button
             mat-icon-button
             matTooltip="Toggle Layers Panel"
@@ -218,16 +219,16 @@
     </mat-toolbar>
 
     <!-- Main Content Area -->
-    <mat-sidenav-container class="sidenav-container" [hasBackdrop]="isHandset">
+    <mat-sidenav-container class="sidenav-container" [hasBackdrop]="data.isHandset">
 
       <!-- Mobile Drawer -->
       <mat-sidenav
         #drawer
         class="sidenav"
         fixedInViewport
-        [attr.role]="isHandset ? 'dialog' : 'navigation'"
-        [mode]="isHandset ? 'over' : 'side'"
-        [opened]="!isHandset && isAuthenticated">
+        [attr.role]="data.isHandset ? 'dialog' : 'navigation'"
+        [mode]="data.isHandset ? 'over' : 'side'"
+        [opened]="!data.isHandset && isAuthenticated">
 
         <!-- Widget Toolbox -->
         <div class="drawer-content" *ngIf="isAuthenticated">
@@ -242,7 +243,7 @@
         <div class="builder-interface" *ngIf="isAuthenticated">
 
           <!-- Desktop Layout -->
-          <div class="desktop-layout" *ngIf="!isHandset">
+          <div class="desktop-layout" *ngIf="!data.isHandset">
 
             <!-- Left Sidebar (Widget Toolbox) -->
             <div class="left-sidebar" [class.collapsed]="!drawer?.opened">
@@ -341,7 +342,7 @@
           </div>
 
           <!-- Mobile Layout -->
-          <div class="mobile-layout" *ngIf="isHandset">
+          <div class="mobile-layout" *ngIf="data.isHandset">
             <div class="mobile-canvas">
               <app-builder-canvas></app-builder-canvas>
             </div>
@@ -394,8 +395,9 @@
           </div>
         </div>
 
-      </mat-sidenav-content>
+</mat-sidenav-content>
     </mat-sidenav-container>
 
   </div>
+  </ng-container>
 </div>
