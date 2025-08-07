@@ -1,4 +1,4 @@
-<!-- src/app/builder/components/properties-panel/properties-panel.component.html -->
+<!-- src/app/builder/components/properties-panel/properties-panel.component.html - ENHANCED -->
 
 <div class="properties-panel">
 
@@ -22,7 +22,7 @@
     <!-- Element Info -->
     <div class="element-info">
       <div class="element-type">
-        <mat-icon class="element-icon">widgets</mat-icon>
+        <mat-icon class="element-icon">{{ getElementIcon() }}</mat-icon>
         <span class="element-name">{{ getElementDisplayName() }}</span>
       </div>
 
@@ -36,111 +36,76 @@
       </div>
     </div>
 
-    <!-- Properties Form -->
-    <form [formGroup]="propertiesForm" class="properties-form">
-      <div class="property-groups">
+    <!-- Properties Tabs -->
+    <mat-tab-group class="property-tabs" *ngIf="hasProperties()">
 
-        <ng-container *ngFor="let config of propertyConfigs; trackBy: trackPropertyConfig">
-          <div class="property-item">
-
-            <!-- Text Input -->
-            <mat-form-field
-              appearance="outline"
-              class="property-field"
-              *ngIf="config.type === 'text'">
-              <mat-label>{{ config.label }}</mat-label>
-              <input matInput [formControlName]="config.key">
-            </mat-form-field>
-
-            <!-- Textarea -->
-            <mat-form-field
-              appearance="outline"
-              class="property-field"
-              *ngIf="config.type === 'textarea'">
-              <mat-label>{{ config.label }}</mat-label>
-              <textarea matInput [formControlName]="config.key" rows="3"></textarea>
-            </mat-form-field>
-
-            <!-- Number Input -->
-            <mat-form-field
-              appearance="outline"
-              class="property-field"
-              *ngIf="config.type === 'number'">
-              <mat-label>{{ config.label }}</mat-label>
-              <input
-                matInput
-                type="number"
-                [formControlName]="config.key"
-                [min]="config.min ?? 0"
-                [max]="config.max ?? 999999"
-                [step]="config.step || 1">
-            </mat-form-field>
-
-            <!-- Color Picker -->
-            <div class="property-field color-field" *ngIf="config.type === 'color'">
-              <label class="property-label">{{ config.label }}</label>
-              <div class="color-input-wrapper">
-                <input
-                  type="color"
-                  [formControlName]="config.key"
-                  class="color-input">
-                <mat-form-field appearance="outline" class="color-text-field">
-                  <input matInput [formControlName]="config.key" placeholder="#000000">
-                </mat-form-field>
-              </div>
-            </div>
-
-            <!-- Select Dropdown -->
-            <mat-form-field
-              appearance="outline"
-              class="property-field"
-              *ngIf="config.type === 'select'">
-              <mat-label>{{ config.label }}</mat-label>
-              <mat-select [formControlName]="config.key">
-                <mat-option
-                  *ngFor="let option of config.options"
-                  [value]="option.value">
-                  {{ option.label }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- Boolean Checkbox -->
-            <div class="property-field checkbox-field" *ngIf="config.type === 'boolean'">
-              <mat-checkbox [formControlName]="config.key">
-                {{ config.label }}
-              </mat-checkbox>
-            </div>
-
-            <!-- Slider -->
-            <div class="property-field slider-field" *ngIf="config.type === 'slider'">
-              <label class="property-label">{{ config.label }}</label>
-              <div class="slider-wrapper">
-                <mat-slider
-                  [min]="config.min || 0"
-                  [max]="config.max || 100"
-                  [step]="config.step || 1"
-                  [displayWith]="formatSliderValue"
-                  class="property-slider">
-                  <input matSliderThumb [formControlName]="config.key" #sliderThumb>
-                </mat-slider>
-                <div class="slider-value">
-                  {{ propertiesForm.get(config.key)?.value || 0 }}
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </ng-container>
-
-        <!-- No properties message -->
-        <div class="no-properties" *ngIf="propertyConfigs.length === 0">
-          <mat-icon>info</mat-icon>
-          <p>This element has no editable properties</p>
+      <!-- Basic Properties Tab -->
+      <mat-tab *ngIf="hasCategoryProperties('basic')">
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">settings</mat-icon>
+          Basic
+        </ng-template>
+        <div class="tab-content">
+          <form [formGroup]="propertiesForm" class="properties-form">
+            <ng-container *ngFor="let schema of basicProperties; trackBy: trackPropertySchema">
+              <ng-container [ngTemplateOutlet]="propertyField" [ngTemplateOutletContext]="{schema: schema}"></ng-container>
+            </ng-container>
+          </form>
         </div>
+      </mat-tab>
 
-      </div>
-    </form>
+      <!-- Style Properties Tab -->
+      <mat-tab *ngIf="hasCategoryProperties('style')">
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">palette</mat-icon>
+          Style
+        </ng-template>
+        <div class="tab-content">
+          <form [formGroup]="propertiesForm" class="properties-form">
+            <ng-container *ngFor="let schema of styleProperties; trackBy: trackPropertySchema">
+              <ng-container [ngTemplateOutlet]="propertyField" [ngTemplateOutletContext]="{schema: schema}"></ng-container>
+            </ng-container>
+          </form>
+        </div>
+      </mat-tab>
+
+      <!-- Layout Properties Tab -->
+      <mat-tab *ngIf="hasCategoryProperties('layout')">
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">dashboard</mat-icon>
+          Layout
+        </ng-template>
+        <div class="tab-content">
+          <form [formGroup]="propertiesForm" class="properties-form">
+            <ng-container *ngFor="let schema of layoutProperties; trackBy: trackPropertySchema">
+              <ng-container [ngTemplateOutlet]="propertyField" [ngTemplateOutletContext]="{schema: schema}"></ng-container>
+            </ng-container>
+          </form>
+        </div>
+      </mat-tab>
+
+      <!-- Advanced Properties Tab -->
+      <mat-tab *ngIf="hasCategoryProperties('advanced')">
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">tune</mat-icon>
+          Advanced
+        </ng-template>
+        <div class="tab-content">
+          <form [formGroup]="propertiesForm" class="properties-form">
+            <ng-container *ngFor="let schema of advancedProperties; trackBy: trackPropertySchema">
+              <ng-container [ngTemplateOutlet]="propertyField" [ngTemplateOutletContext]="{schema: schema}"></ng-container>
+            </ng-container>
+          </form>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+
+    <!-- No properties message -->
+    <div class="no-properties" *ngIf="!hasProperties()">
+      <mat-icon>info</mat-icon>
+      <p>This element has no editable properties</p>
+    </div>
 
     <!-- Element Path (Debug Info) -->
     <div class="element-path" *ngIf="selectedElement">
@@ -150,3 +115,281 @@
 
   </div>
 </div>
+
+<!-- Property Field Template -->
+<ng-template #propertyField let-schema="schema">
+  <div class="property-item" [attr.data-property]="schema.key">
+
+    <!-- Text Input -->
+    <mat-form-field
+      appearance="outline"
+      class="property-field"
+      *ngIf="schema.type === 'text'">
+      <mat-label>{{ schema.label }}</mat-label>
+      <input matInput [formControlName]="schema.key">
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </mat-form-field>
+
+    <!-- Textarea -->
+    <mat-form-field
+      appearance="outline"
+      class="property-field"
+      *ngIf="schema.type === 'textarea'">
+      <mat-label>{{ schema.label }}</mat-label>
+      <textarea matInput [formControlName]="schema.key" rows="3"></textarea>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </mat-form-field>
+
+    <!-- Number Input -->
+    <mat-form-field
+      appearance="outline"
+      class="property-field"
+      *ngIf="schema.type === 'number'">
+      <mat-label>{{ schema.label }}</mat-label>
+      <input
+        matInput
+        type="number"
+        [formControlName]="schema.key"
+        [min]="schema.min ?? 0"
+        [max]="schema.max ?? 999999"
+        [step]="schema.step || 1">
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </mat-form-field>
+
+    <!-- Color Picker -->
+    <div class="property-field color-field" *ngIf="schema.type === 'color'">
+      <label class="property-label">{{ schema.label }}</label>
+      <div class="color-input-wrapper">
+        <input
+          type="color"
+          [formControlName]="schema.key"
+          class="color-input">
+        <mat-form-field appearance="outline" class="color-text-field">
+          <input matInput [formControlName]="schema.key" placeholder="#000000">
+        </mat-form-field>
+      </div>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </div>
+
+    <!-- Select Dropdown -->
+    <mat-form-field
+      appearance="outline"
+      class="property-field"
+      *ngIf="schema.type === 'select'">
+      <mat-label>{{ schema.label }}</mat-label>
+      <mat-select [formControlName]="schema.key">
+        <mat-option
+          *ngFor="let option of schema.options"
+          [value]="option.value">
+          {{ option.label }}
+        </mat-option>
+      </mat-select>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </mat-form-field>
+
+    <!-- Boolean Checkbox -->
+    <div class="property-field checkbox-field" *ngIf="schema.type === 'boolean'">
+      <mat-checkbox [formControlName]="schema.key">
+        {{ schema.label }}
+      </mat-checkbox>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </div>
+
+    <!-- Slider -->
+    <div class="property-field slider-field" *ngIf="schema.type === 'slider'">
+      <label class="property-label">{{ schema.label }}</label>
+      <div class="slider-wrapper">
+        <mat-slider
+          [min]="schema.min || 0"
+          [max]="schema.max || 100"
+          [step]="schema.step || 1"
+          [displayWith]="formatSliderValue"
+          class="property-slider">
+          <input matSliderThumb [formControlName]="schema.key" #sliderThumb>
+        </mat-slider>
+        <div class="slider-value">
+          {{ propertiesForm.get(schema.key)?.value || 0 }}
+        </div>
+      </div>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </div>
+
+    <!-- Icon Picker -->
+    <div class="property-field icon-field" *ngIf="schema.type === 'icon'">
+      <label class="property-label">{{ schema.label }}</label>
+      <mat-form-field appearance="outline" class="icon-input-field">
+        <input matInput [formControlName]="schema.key" placeholder="Icon name">
+        <button mat-icon-button matSuffix [matMenuTriggerFor]="iconMenu">
+          <mat-icon>{{ propertiesForm.get(schema.key)?.value || 'star' }}</mat-icon>
+        </button>
+      </mat-form-field>
+      <mat-menu #iconMenu="matMenu" class="icon-picker-menu">
+        <div class="icon-grid">
+          <button
+            mat-icon-button
+            *ngFor="let icon of commonIcons"
+            (click)="selectIcon(icon, schema.key)"
+            [class.selected]="propertiesForm.get(schema.key)?.value === icon">
+            <mat-icon>{{ icon }}</mat-icon>
+          </button>
+        </div>
+      </mat-menu>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </div>
+
+    <!-- Padding Editor -->
+    <div class="property-field padding-field" *ngIf="schema.type === 'padding'">
+      <mat-expansion-panel [expanded]="paddingExpanded">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            {{ schema.label }}
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div class="spacing-editor">
+          <mat-button-toggle-group
+            [formControlName]="schema.key + '_mode'"
+            (change)="onPaddingModeChange($event.value)"
+            class="spacing-mode-toggle">
+            <mat-button-toggle value="all">All</mat-button-toggle>
+            <mat-button-toggle value="axis">H/V</mat-button-toggle>
+            <mat-button-toggle value="individual">Individual</mat-button-toggle>
+          </mat-button-toggle-group>
+
+          <!-- All sides -->
+          <div class="spacing-inputs" *ngIf="propertiesForm.get(schema.key + '_mode')?.value === 'all'">
+            <mat-form-field appearance="outline">
+              <mat-label>All Sides</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_all'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+          </div>
+
+          <!-- Horizontal/Vertical -->
+          <div class="spacing-inputs" *ngIf="propertiesForm.get(schema.key + '_mode')?.value === 'axis'">
+            <mat-form-field appearance="outline">
+              <mat-label>Horizontal</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_horizontal'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Vertical</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_vertical'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+          </div>
+
+          <!-- Individual sides -->
+          <div class="spacing-inputs individual" *ngIf="propertiesForm.get(schema.key + '_mode')?.value === 'individual'">
+            <mat-form-field appearance="outline">
+              <mat-label>Top</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_top'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Right</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_right'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Bottom</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_bottom'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Left</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_left'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </div>
+
+    <!-- Margin Editor (similar to padding) -->
+    <div class="property-field margin-field" *ngIf="schema.type === 'margin'">
+      <mat-expansion-panel [expanded]="marginExpanded">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            {{ schema.label }}
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div class="spacing-editor">
+          <mat-button-toggle-group
+            [formControlName]="schema.key + '_mode'"
+            (change)="onMarginModeChange($event.value)"
+            class="spacing-mode-toggle">
+            <mat-button-toggle value="all">All</mat-button-toggle>
+            <mat-button-toggle value="axis">H/V</mat-button-toggle>
+            <mat-button-toggle value="individual">Individual</mat-button-toggle>
+          </mat-button-toggle-group>
+
+          <!-- All sides -->
+          <div class="spacing-inputs" *ngIf="propertiesForm.get(schema.key + '_mode')?.value === 'all'">
+            <mat-form-field appearance="outline">
+              <mat-label>All Sides</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_all'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+          </div>
+
+          <!-- Horizontal/Vertical -->
+          <div class="spacing-inputs" *ngIf="propertiesForm.get(schema.key + '_mode')?.value === 'axis'">
+            <mat-form-field appearance="outline">
+              <mat-label>Horizontal</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_horizontal'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Vertical</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_vertical'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+          </div>
+
+          <!-- Individual sides -->
+          <div class="spacing-inputs individual" *ngIf="propertiesForm.get(schema.key + '_mode')?.value === 'individual'">
+            <mat-form-field appearance="outline">
+              <mat-label>Top</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_top'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Right</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_right'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Bottom</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_bottom'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Left</mat-label>
+              <input matInput type="number" [formControlName]="schema.key + '_left'" min="0">
+              <span matSuffix>px</span>
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </div>
+
+    <!-- Alignment Picker -->
+    <div class="property-field alignment-field" *ngIf="schema.type === 'alignment'">
+      <label class="property-label">{{ schema.label }}</label>
+      <div class="alignment-grid">
+        <button
+          mat-icon-button
+          *ngFor="let option of alignmentOptions"
+          (click)="selectAlignment(option.value, schema.key)"
+          [class.selected]="propertiesForm.get(schema.key)?.value === option.value"
+          [matTooltip]="option.label">
+          <mat-icon>{{ option.icon }}</mat-icon>
+        </button>
+      </div>
+      <mat-hint *ngIf="schema.hint">{{ schema.hint }}</mat-hint>
+    </div>
+
+  </div>
+</ng-template>

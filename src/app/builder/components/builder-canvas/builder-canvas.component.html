@@ -1,411 +1,645 @@
-<!-- src/app/builder/components/builder-canvas/builder-canvas.component.html -->
+<!-- src/app/builder/components/builder-canvas/builder-canvas.component.html - COMPLETE -->
 
-<div class="builder-canvas"
-     (click)="onCanvasClick($event)"
-     cdkDropList
-     [cdkDropListData]="{path: []}"
-     (cdkDropListDropped)="onDrop($event)"
-     (cdkDropListEntered)="onDragEnter($event, [])"
-     (cdkDropListExited)="onDragExit($event)">
+<div class="builder-canvas-wrapper">
+  <!-- Canvas Toolbar -->
+  <div class="canvas-toolbar">
+    <div class="toolbar-group">
+      <button mat-icon-button (click)="toggleGrid()" [class.active]="showGrid" matTooltip="Toggle Grid">
+        <mat-icon>grid_on</mat-icon>
+      </button>
+      <button mat-icon-button (click)="toggleOutlines()" [class.active]="showOutlines" matTooltip="Toggle Outlines">
+        <mat-icon>border_all</mat-icon>
+      </button>
+    </div>
 
-  <!-- Canvas Content -->
-  <div class="canvas-content">
-    <ng-container *ngIf="uiStructure">
-      <div class="canvas-root">
-        <ng-container
-          [ngTemplateOutlet]="elementTemplate"
-          [ngTemplateOutletContext]="{component: uiStructure, path: []}">
-        </ng-container>
-      </div>
-    </ng-container>
+    <div class="toolbar-group">
+      <button mat-icon-button (click)="setDeviceFrame('none')" [class.active]="deviceFrame === 'none'" matTooltip="No Frame">
+        <mat-icon>fullscreen</mat-icon>
+      </button>
+      <button mat-icon-button (click)="setDeviceFrame('phone')" [class.active]="deviceFrame === 'phone'" matTooltip="Phone Frame">
+        <mat-icon>smartphone</mat-icon>
+      </button>
+      <button mat-icon-button (click)="setDeviceFrame('tablet')" [class.active]="deviceFrame === 'tablet'" matTooltip="Tablet Frame">
+        <mat-icon>tablet_mac</mat-icon>
+      </button>
+    </div>
 
-    <!-- Empty State -->
-    <div class="empty-canvas" *ngIf="!uiStructure || (!uiStructure.children?.length && uiStructure.type === 'container')">
-      <div class="empty-content">
-        <mat-icon class="empty-icon">widgets</mat-icon>
-        <h3>Start Building Your App</h3>
-        <p>Drag widgets from the toolbox to begin designing your screen</p>
-      </div>
+    <div class="toolbar-group zoom-controls">
+      <button mat-icon-button (click)="zoomOut()" matTooltip="Zoom Out">
+        <mat-icon>zoom_out</mat-icon>
+      </button>
+      <span class="zoom-level">{{ (canvasScale * 100).toFixed(0) }}%</span>
+      <button mat-icon-button (click)="zoomIn()" matTooltip="Zoom In">
+        <mat-icon>zoom_in</mat-icon>
+      </button>
+      <button mat-icon-button (click)="resetZoom()" matTooltip="Reset Zoom">
+        <mat-icon>zoom_out_map</mat-icon>
+      </button>
     </div>
   </div>
 
-  <!-- Drop Zone Overlay -->
-  <div class="drop-overlay"
-       *ngIf="draggedElement && isDropTarget"
-       [class.active]="isDropTarget">
-    <div class="drop-indicator">
-      <mat-icon>add</mat-icon>
-      <span>Drop widget here</span>
+  <!-- Canvas Area -->
+  <div class="builder-canvas"
+       [class.show-grid]="showGrid"
+       [class.show-outlines]="showOutlines"
+       (click)="onCanvasClick($event)">
+
+    <div class="canvas-viewport"
+         [class.device-phone]="deviceFrame === 'phone'"
+         [class.device-tablet]="deviceFrame === 'tablet'"
+         [style.transform]="'scale(' + canvasScale + ')'"
+         cdkDropList
+         [cdkDropListData]="{path: []}"
+         (cdkDropListDropped)="onDrop($event)"
+         (cdkDropListEntered)="onDragEnter($event, [])"
+         (cdkDropListExited)="onDragExit($event)">
+
+      <!-- Canvas Content -->
+      <div class="canvas-content">
+        <ng-container *ngIf="uiStructure">
+          <div class="canvas-root">
+            <ng-container
+              [ngTemplateOutlet]="widgetRenderer"
+              [ngTemplateOutletContext]="{component: uiStructure, path: []}">
+            </ng-container>
+          </div>
+        </ng-container>
+
+        <!-- Empty State -->
+        <div class="empty-canvas" *ngIf="!uiStructure || (!uiStructure.children?.length && uiStructure.type === 'container')">
+          <div class="empty-content">
+            <mat-icon class="empty-icon">widgets</mat-icon>
+            <h3>Start Building Your App</h3>
+            <p>Drag widgets from the toolbox to begin designing your screen</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drop Zone Overlay -->
+      <div class="drop-overlay"
+           *ngIf="draggedElement && activeDropZone?.isActive"
+           [class.can-drop]="activeDropZone?.canDrop"
+           [class.cannot-drop]="!activeDropZone?.canDrop">
+        <div class="drop-indicator">
+          <mat-icon>{{ activeDropZone?.canDrop ? 'add' : 'block' }}</mat-icon>
+          <span>{{ activeDropZone?.canDrop ? 'Drop widget here' : 'Cannot drop here' }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Recursive Element Template -->
-<ng-template #elementTemplate let-component="component" let-path="path">
+<!-- Universal Widget Renderer Template -->
+<ng-template #widgetRenderer let-component="component" let-path="path">
   <div
-    class="canvas-element-wrapper"
-    [ngClass]="getElementClasses(component, path)"
+    class="widget-wrapper"
+    [attr.data-widget-type]="component.type"
+    [ngClass]="{
+      'selected': isElementSelected(path),
+      'hovered': isElementHovered(path),
+      'drop-target': isDropTarget(path),
+      'can-drop': canDropAtPath(path),
+      'is-container': canAcceptChildren(component)
+    }"
     [ngStyle]="getElementStyles(component)"
     (click)="onElementClick(component, path, $event)"
+    (mouseenter)="onElementMouseEnter(path)"
+    (mouseleave)="onElementMouseLeave()"
     cdkDrag
     [cdkDragData]="{component: component, path: path}"
-    cdkDropList
-    [cdkDropListData]="{path: path}"
-    (cdkDropListDropped)="onDrop($event, path)"
-    (cdkDropListEntered)="onDragEnter($event, path)"
-    (cdkDropListExited)="onDragExit($event)">
+    [cdkDragDisabled]="path.length === 0">
 
-    <!-- Element Controls (visible when selected) -->
-    <div class="element-controls" *ngIf="isElementSelected(path) && path.length > 0">
-      <button
-        mat-icon-button
-        class="control-btn duplicate-btn"
-        (click)="onDuplicateElement(path, $event)"
-        matTooltip="Duplicate">
-        <mat-icon>content_copy</mat-icon>
-      </button>
-      <button
-        mat-icon-button
-        class="control-btn delete-btn"
-        (click)="onDeleteElement(path, $event)"
-        matTooltip="Delete">
-        <mat-icon>delete</mat-icon>
-      </button>
+    <!-- Widget Controls (visible when selected) -->
+    <div class="widget-controls" *ngIf="isElementSelected(path) && path.length > 0">
+      <div class="widget-label">
+        <mat-icon class="widget-type-icon">{{ getElementIcon(component) }}</mat-icon>
+        <span>{{ getElementDisplayName(component) }}</span>
+      </div>
+      <div class="widget-actions">
+        <button mat-icon-button size="small" (click)="onCopyElement(path, $event)" matTooltip="Copy">
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        <button mat-icon-button size="small" (click)="onDuplicateElement(path, $event)" matTooltip="Duplicate">
+          <mat-icon>control_point_duplicate</mat-icon>
+        </button>
+        <button mat-icon-button size="small" (click)="onDeleteElement(path, $event)" matTooltip="Delete" class="delete-btn">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
     </div>
 
-    <!-- Element Content -->
-    <div class="element-content">
+    <!-- Widget Content Based on Type -->
+    <div class="widget-content" [ngSwitch]="component.type.toLowerCase()">
 
-      <!-- Layout Widgets -->
+      <!-- LAYOUT WIDGETS -->
 
       <!-- Scaffold -->
-      <ng-container *ngIf="component.type === 'scaffold'">
-        <div class="scaffold-content">
-          <div class="scaffold-appbar" *ngIf="component.properties.showAppBar">
-            <mat-icon>menu</mat-icon>
-            <span>{{ component.properties.title || 'App Bar' }}</span>
-          </div>
-          <div class="scaffold-body">
-            <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
-              <ng-container
-                [ngTemplateOutlet]="elementTemplate"
-                [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
-              </ng-container>
+      <div *ngSwitchCase="'scaffold'" class="widget-scaffold">
+        <div class="scaffold-appbar" *ngIf="component.properties?.showAppBar !== false"
+             [style.background-color]="component.properties?.appBarColor || '#2196F3'">
+          <mat-icon>menu</mat-icon>
+          <span>{{ component.properties?.title || 'App Bar' }}</span>
+          <div class="appbar-spacer"></div>
+          <mat-icon>more_vert</mat-icon>
+        </div>
+        <div class="scaffold-body"
+             [style.background-color]="component.properties?.backgroundColor"
+             cdkDropList
+             [cdkDropListData]="{path: path}"
+             (cdkDropListDropped)="onDrop($event, path)"
+             (cdkDropListEntered)="onDragEnter($event, path)"
+             (cdkDropListExited)="onDragExit($event)">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <ng-container
+              [ngTemplateOutlet]="widgetRenderer"
+              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
             </ng-container>
+          </ng-container>
+          <div class="empty-container" *ngIf="!component.children?.length">
+            <mat-icon>web</mat-icon>
+            <span>Scaffold Body</span>
           </div>
         </div>
-      </ng-container>
+      </div>
 
       <!-- Container -->
-      <ng-container *ngIf="component.type === 'container'">
-        <div class="container-content">
-          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
-            <ng-container
-              [ngTemplateOutlet]="elementTemplate"
-              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
-            </ng-container>
+      <div *ngSwitchCase="'container'" class="widget-container"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
           </ng-container>
-          <div class="container-placeholder" *ngIf="!component.children?.length">
-            <mat-icon>crop_free</mat-icon>
-            <span>Container</span>
-          </div>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>crop_free</mat-icon>
+          <span>Container</span>
         </div>
-      </ng-container>
+      </div>
 
       <!-- Column -->
-      <ng-container *ngIf="component.type === 'column'">
-        <div class="column-content">
-          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
-            <ng-container
-              [ngTemplateOutlet]="elementTemplate"
-              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
-            </ng-container>
+      <div *ngSwitchCase="'column'" class="widget-column"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
           </ng-container>
-          <div class="column-placeholder" *ngIf="!component.children?.length">
-            <mat-icon>view_column</mat-icon>
-            <span>Column</span>
-          </div>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>view_column</mat-icon>
+          <span>Column</span>
         </div>
-      </ng-container>
+      </div>
 
       <!-- Row -->
-      <ng-container *ngIf="component.type === 'row'">
-        <div class="row-content">
-          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
-            <ng-container
-              [ngTemplateOutlet]="elementTemplate"
-              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
-            </ng-container>
+      <div *ngSwitchCase="'row'" class="widget-row"
+           cdkDropList
+           cdkDropListOrientation="horizontal"
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
           </ng-container>
-          <div class="row-placeholder" *ngIf="!component.children?.length">
-            <mat-icon>view_stream</mat-icon>
-            <span>Row</span>
-          </div>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>view_stream</mat-icon>
+          <span>Row</span>
         </div>
-      </ng-container>
+      </div>
 
       <!-- Stack -->
-      <ng-container *ngIf="component.type === 'stack'">
-        <div class="stack-content">
-          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
-            <div class="stack-child" [style.z-index]="i">
-              <ng-container
-                [ngTemplateOutlet]="elementTemplate"
-                [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
-              </ng-container>
-            </div>
-          </ng-container>
-          <div class="stack-placeholder" *ngIf="!component.children?.length">
-            <mat-icon>layers</mat-icon>
-            <span>Stack</span>
-          </div>
-        </div>
-      </ng-container>
-
-      <!-- Card -->
-      <ng-container *ngIf="component.type === 'card'">
-        <div class="card-content mat-elevation-z2">
-          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+      <div *ngSwitchCase="'stack'" class="widget-stack"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <div class="stack-child" [style.z-index]="i">
             <ng-container
-              [ngTemplateOutlet]="elementTemplate"
+              [ngTemplateOutlet]="widgetRenderer"
               [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
             </ng-container>
-          </ng-container>
-          <div class="card-placeholder" *ngIf="!component.children?.length">
-            <mat-icon>credit_card</mat-icon>
-            <span>Card</span>
           </div>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>layers</mat-icon>
+          <span>Stack</span>
         </div>
-      </ng-container>
+      </div>
+
+      <!-- Center -->
+      <div *ngSwitchCase="'center'" class="widget-center"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>center_focus_weak</mat-icon>
+          <span>Center</span>
+        </div>
+      </div>
+
+      <!-- Padding -->
+      <div *ngSwitchCase="'padding'" class="widget-padding"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>space_bar</mat-icon>
+          <span>Padding</span>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div *ngSwitchCase="'card'" class="widget-card mat-elevation-z"
+           [class.mat-elevation-z1]="(component.properties?.elevation || 2) === 1"
+           [class.mat-elevation-z2]="(component.properties?.elevation || 2) === 2"
+           [class.mat-elevation-z3]="(component.properties?.elevation || 2) === 3"
+           [class.mat-elevation-z4]="(component.properties?.elevation || 2) === 4"
+           [class.mat-elevation-z8]="(component.properties?.elevation || 2) >= 8"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>credit_card</mat-icon>
+          <span>Card</span>
+        </div>
+      </div>
 
       <!-- ListView -->
-      <ng-container *ngIf="component.type === 'listview'">
-        <div class="listview-content">
-          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
-            <div class="list-item">
-              <ng-container
-                [ngTemplateOutlet]="elementTemplate"
-                [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
-              </ng-container>
-            </div>
-          </ng-container>
-          <div class="listview-placeholder" *ngIf="!component.children?.length">
-            <mat-icon>list</mat-icon>
-            <span>ListView</span>
+      <div *ngSwitchCase="'listview'" class="widget-listview"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <div class="list-item">
+            <ng-container
+              [ngTemplateOutlet]="widgetRenderer"
+              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+            </ng-container>
           </div>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>list</mat-icon>
+          <span>ListView</span>
         </div>
-      </ng-container>
+      </div>
 
-      <!-- Display Widgets -->
+      <!-- GridView -->
+      <div *ngSwitchCase="'gridview'" class="widget-gridview"
+           [style.grid-template-columns]="'repeat(' + (component.properties?.crossAxisCount || 2) + ', 1fr)'"
+           [style.gap]="(component.properties?.crossAxisSpacing || 8) + 'px'"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>grid_view</mat-icon>
+          <span>GridView</span>
+        </div>
+      </div>
+
+      <!-- Wrap -->
+      <div *ngSwitchCase="'wrap'" class="widget-wrap"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>wrap_text</mat-icon>
+          <span>Wrap</span>
+        </div>
+      </div>
+
+      <!-- Expanded -->
+      <div *ngSwitchCase="'expanded'" class="widget-expanded"
+           [style.flex]="component.properties?.flex || 1"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>open_in_full</mat-icon>
+          <span>Expanded</span>
+        </div>
+      </div>
+
+      <!-- Flexible -->
+      <div *ngSwitchCase="'flexible'" class="widget-flexible"
+           [style.flex]="component.properties?.flex || 1"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>fit_screen</mat-icon>
+          <span>Flexible</span>
+        </div>
+      </div>
+
+      <!-- SizedBox -->
+      <div *ngSwitchCase="'sizedbox'" class="widget-sizedbox"
+           cdkDropList
+           [cdkDropListData]="{path: path}"
+           (cdkDropListDropped)="onDrop($event, path)"
+           (cdkDropListEntered)="onDragEnter($event, path)"
+           (cdkDropListExited)="onDragExit($event)">
+        <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+          <ng-container
+            [ngTemplateOutlet]="widgetRenderer"
+            [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+          </ng-container>
+        </ng-container>
+        <div class="empty-container" *ngIf="!component.children?.length">
+          <mat-icon>crop_din</mat-icon>
+          <span>SizedBox</span>
+        </div>
+      </div>
+
+      <!-- DISPLAY WIDGETS -->
 
       <!-- Text -->
-      <ng-container *ngIf="component.type === 'text'">
-        <div class="text-content"
-             [ngStyle]="{
-               'font-size': component.properties.fontSize ? component.properties.fontSize + 'px' : '16px',
-               'color': component.properties.color || '#000000',
-               'text-align': component.properties.textAlign || 'left',
-               'font-weight': component.properties.fontWeight || 'normal',
-               'font-style': component.properties.fontStyle || 'normal',
-               'text-decoration': component.properties.textDecoration || 'none'
-             }">
-          {{ getDisplayText(component) }}
-        </div>
-      </ng-container>
+      <div *ngSwitchCase="'text'" class="widget-text"
+           [style.font-size]="(component.properties?.fontSize || 16) + 'px'"
+           [style.color]="component.properties?.color || '#000000'"
+           [style.text-align]="component.properties?.textAlign || 'left'"
+           [style.font-weight]="component.properties?.fontWeight || 'normal'"
+           [style.font-style]="component.properties?.fontStyle || 'normal'"
+           [style.text-decoration]="component.properties?.textDecoration || 'none'"
+           [style.line-height]="component.properties?.lineHeight">
+        {{ getTextContent(component) }}
+      </div>
 
       <!-- Icon -->
-      <ng-container *ngIf="component.type === 'icon'">
-        <mat-icon class="icon-content"
-                  [ngStyle]="{
-                    'font-size': component.properties.size ? component.properties.size + 'px' : '24px',
-                    'color': component.properties.color || '#000000'
-                  }">
-          {{ getIconName(component) }}
-        </mat-icon>
-      </ng-container>
+      <mat-icon *ngSwitchCase="'icon'" class="widget-icon"
+                [style.font-size]="(component.properties?.size || 24) + 'px'"
+                [style.width]="(component.properties?.size || 24) + 'px'"
+                [style.height]="(component.properties?.size || 24) + 'px'"
+                [style.color]="component.properties?.color || '#000000'">
+        {{ getIconName(component) }}
+      </mat-icon>
 
       <!-- Image -->
-      <ng-container *ngIf="component.type === 'image'">
-        <div class="image-content">
-          <img [src]="component.properties.source || 'assets/placeholder.png'"
-               [alt]="component.properties.alt || 'Image'"
-               [ngStyle]="{
-                 'width': component.properties.width ? component.properties.width + 'px' : '100%',
-                 'height': component.properties.height ? component.properties.height + 'px' : 'auto',
-                 'object-fit': component.properties.fit || 'cover'
-               }">
-        </div>
-      </ng-container>
+      <div *ngSwitchCase="'image'" class="widget-image">
+        <img [src]="component.properties?.source || 'assets/placeholder.png'"
+             [alt]="component.properties?.alt || 'Image'"
+             [style.width]="component.properties?.width ? (component.properties.width + 'px') : '100%'"
+             [style.height]="component.properties?.height ? (component.properties.height + 'px') : 'auto'"
+             [style.object-fit]="component.properties?.fit || 'cover'">
+      </div>
 
       <!-- Divider -->
-      <ng-container *ngIf="component.type === 'divider'">
-        <div class="divider-content"
-             [ngStyle]="{
-               'height': component.properties.thickness ? component.properties.thickness + 'px' : '1px',
-               'background-color': component.properties.color || '#e0e0e0',
-               'margin': component.properties.indent ? '0 ' + component.properties.indent + 'px' : '0'
-             }">
-        </div>
-      </ng-container>
-
-      <!-- Input Widgets -->
-
-      <!-- TextField -->
-      <ng-container *ngIf="component.type === 'textfield'">
-        <div class="textfield-content">
-          <input type="text"
-                 class="mock-textfield"
-                 [placeholder]="component.properties.hintText || 'Enter text'"
-                 [value]="component.properties.text || ''"
-                 disabled>
-        </div>
-      </ng-container>
-
-      <!-- Checkbox -->
-      <ng-container *ngIf="component.type === 'checkbox'">
-        <div class="checkbox-content">
-          <input type="checkbox"
-                 [checked]="component.properties.value"
-                 disabled>
-          <span>{{ component.properties.label || 'Checkbox' }}</span>
-        </div>
-      </ng-container>
-
-      <!-- Switch -->
-      <ng-container *ngIf="component.type === 'switch'">
-        <div class="switch-content">
-          <label class="switch">
-            <input type="checkbox" [checked]="component.properties.value" disabled>
-            <span class="switch-slider"></span>
-          </label>
-          <span>{{ component.properties.label || 'Switch' }}</span>
-        </div>
-      </ng-container>
-
-      <!-- Radio -->
-      <ng-container *ngIf="component.type === 'radio'">
-        <div class="radio-content">
-          <input type="radio"
-                 [checked]="component.properties.value"
-                 disabled>
-          <span>{{ component.properties.label || 'Radio' }}</span>
-        </div>
-      </ng-container>
-
-      <!-- Slider -->
-      <ng-container *ngIf="component.type === 'slider'">
-        <div class="slider-content">
-          <input type="range"
-                 class="mock-slider"
-                 [min]="component.properties.min || 0"
-                 [max]="component.properties.max || 100"
-                 [value]="component.properties.value || 50"
-                 disabled>
-        </div>
-      </ng-container>
-
-      <!-- Button Widgets -->
-
-      <!-- ElevatedButton -->
-      <ng-container *ngIf="component.type === 'elevatedbutton'">
-        <button class="elevated-button mat-elevation-z2" disabled>
-          <mat-icon *ngIf="component.properties.icon">{{ getIconName(component) }}</mat-icon>
-          {{ getDisplayText(component) }}
-        </button>
-      </ng-container>
-
-      <!-- TextButton -->
-      <ng-container *ngIf="component.type === 'textbutton'">
-        <button class="text-button" disabled>
-          <mat-icon *ngIf="component.properties.icon">{{ getIconName(component) }}</mat-icon>
-          {{ getDisplayText(component) }}
-        </button>
-      </ng-container>
-
-      <!-- OutlinedButton -->
-      <ng-container *ngIf="component.type === 'outlinedbutton'">
-        <button class="outlined-button" disabled>
-          <mat-icon *ngIf="component.properties.icon">{{ getIconName(component) }}</mat-icon>
-          {{ getDisplayText(component) }}
-        </button>
-      </ng-container>
-
-      <!-- IconButton -->
-      <ng-container *ngIf="component.type === 'iconbutton'">
-        <button class="icon-button" disabled>
-          <mat-icon>{{ getIconName(component) }}</mat-icon>
-        </button>
-      </ng-container>
-
-      <!-- FloatingActionButton -->
-      <ng-container *ngIf="component.type === 'floatingactionbutton'">
-        <button class="fab-button mat-elevation-z6" disabled>
-          <mat-icon>{{ getIconName(component) }}</mat-icon>
-        </button>
-      </ng-container>
-
-      <!-- Navigation Widgets -->
-
-      <!-- AppBar -->
-      <ng-container *ngIf="component.type === 'appbar'">
-        <div class="appbar-content">
-          <mat-icon>menu</mat-icon>
-          <span class="appbar-title">{{ component.properties.title || 'App Bar' }}</span>
-          <div class="appbar-actions">
-            <mat-icon>search</mat-icon>
-            <mat-icon>more_vert</mat-icon>
-          </div>
-        </div>
-      </ng-container>
-
-      <!-- BottomNavigationBar -->
-      <ng-container *ngIf="component.type === 'bottomnavigationbar'">
-        <div class="bottom-nav-content">
-          <div class="nav-item" *ngFor="let item of (component.properties.items || ['Home', 'Search', 'Profile'])">
-            <mat-icon>{{ item.icon || 'home' }}</mat-icon>
-            <span>{{ item.label || item }}</span>
-          </div>
-        </div>
-      </ng-container>
-
-      <!-- ListTile -->
-      <ng-container *ngIf="component.type === 'listtile'">
-        <div class="listtile-content">
-          <mat-icon class="listtile-leading" *ngIf="component.properties.leadingIcon">
-            {{ component.properties.leadingIcon }}
-          </mat-icon>
-          <div class="listtile-text">
-            <div class="listtile-title">{{ component.properties.title || 'List Item' }}</div>
-            <div class="listtile-subtitle" *ngIf="component.properties.subtitle">
-              {{ component.properties.subtitle }}
-            </div>
-          </div>
-          <mat-icon class="listtile-trailing" *ngIf="component.properties.trailingIcon">
-            {{ component.properties.trailingIcon }}
-          </mat-icon>
-        </div>
-      </ng-container>
-
-      <!-- Other Widgets -->
+      <div *ngSwitchCase="'divider'" class="widget-divider"
+           [style.height]="(component.properties?.thickness || 1) + 'px'"
+           [style.background-color]="component.properties?.color || '#E0E0E0'"
+           [style.margin-left]="(component.properties?.indent || 0) + 'px'"
+           [style.margin-right]="(component.properties?.endIndent || 0) + 'px'">
+      </div>
 
       <!-- CircularProgressIndicator -->
-      <ng-container *ngIf="component.type === 'circularprogressindicator'">
-        <div class="progress-content">
-          <div class="circular-progress"></div>
+      <div *ngSwitchCase="'circularprogressindicator'" class="widget-progress">
+        <div class="circular-progress"
+             [style.width]="'40px'"
+             [style.height]="'40px'"
+             [style.border-color]="component.properties?.color || '#2196F3'">
         </div>
-      </ng-container>
+      </div>
 
-      <!-- Generic placeholder for unknown types -->
-      <ng-container *ngIf="!['scaffold', 'container', 'column', 'row', 'stack', 'card', 'listview',
-                            'text', 'icon', 'image', 'divider',
-                            'textfield', 'checkbox', 'switch', 'radio', 'slider',
-                            'elevatedbutton', 'textbutton', 'outlinedbutton', 'iconbutton', 'floatingactionbutton',
-                            'appbar', 'bottomnavigationbar', 'listtile', 'circularprogressindicator'].includes(component.type)">
-        <div class="generic-placeholder">
+      <!-- INPUT WIDGETS -->
+
+      <!-- TextField -->
+      <div *ngSwitchCase="'textfield'" class="widget-textfield">
+        <input type="text"
+               class="mock-textfield"
+               [placeholder]="component.properties?.hintText || 'Enter text'"
+               [value]="component.properties?.text || ''"
+               [disabled]="!component.properties?.enabled"
+               readonly>
+        <label class="textfield-label" *ngIf="component.properties?.labelText">
+          {{ component.properties.labelText }}
+        </label>
+      </div>
+
+      <!-- Checkbox -->
+      <div *ngSwitchCase="'checkbox'" class="widget-checkbox">
+        <input type="checkbox"
+               [checked]="component.properties?.value"
+               [disabled]="!component.properties?.enabled"
+               readonly>
+        <span>{{ component.properties?.label || 'Checkbox' }}</span>
+      </div>
+
+      <!-- Switch -->
+      <div *ngSwitchCase="'switch'" class="widget-switch">
+        <label class="switch">
+          <input type="checkbox"
+                 [checked]="component.properties?.value"
+                 [disabled]="!component.properties?.enabled"
+                 readonly>
+          <span class="switch-slider"
+                [style.background-color]="component.properties?.value ? (component.properties?.activeColor || '#2196F3') : (component.properties?.inactiveTrackColor || '#9E9E9E')">
+          </span>
+        </label>
+        <span>{{ component.properties?.label || 'Switch' }}</span>
+      </div>
+
+      <!-- Radio -->
+      <div *ngSwitchCase="'radio'" class="widget-radio">
+        <input type="radio"
+               [checked]="component.properties?.value"
+               [disabled]="!component.properties?.enabled"
+               readonly>
+        <span>{{ component.properties?.label || 'Radio' }}</span>
+      </div>
+
+      <!-- Slider -->
+      <div *ngSwitchCase="'slider'" class="widget-slider">
+        <input type="range"
+               class="mock-slider"
+               [min]="component.properties?.min || 0"
+               [max]="component.properties?.max || 100"
+               [value]="component.properties?.value || 50"
+               [disabled]="!component.properties?.enabled"
+               readonly>
+        <span class="slider-label" *ngIf="component.properties?.label">
+          {{ component.properties.label }}
+        </span>
+      </div>
+
+      <!-- BUTTON WIDGETS -->
+
+      <!-- ElevatedButton -->
+      <button *ngSwitchCase="'elevatedbutton'" class="widget-button elevated-button"
+              [style.background-color]="component.properties?.backgroundColor || '#2196F3'"
+              [style.color]="component.properties?.foregroundColor || '#FFFFFF'"
+              [disabled]="!component.properties?.enabled">
+        <mat-icon *ngIf="component.properties?.icon">{{ component.properties.icon }}</mat-icon>
+        {{ component.properties?.text || 'Elevated Button' }}
+      </button>
+
+      <!-- TextButton -->
+      <button *ngSwitchCase="'textbutton'" class="widget-button text-button"
+              [style.color]="component.properties?.foregroundColor || '#2196F3'"
+              [disabled]="!component.properties?.enabled">
+        <mat-icon *ngIf="component.properties?.icon">{{ component.properties.icon }}</mat-icon>
+        {{ component.properties?.text || 'Text Button' }}
+      </button>
+
+      <!-- OutlinedButton -->
+      <button *ngSwitchCase="'outlinedbutton'" class="widget-button outlined-button"
+              [style.color]="component.properties?.foregroundColor || '#2196F3'"
+              [style.border-color]="component.properties?.borderColor || '#2196F3'"
+              [style.border-width]="(component.properties?.borderWidth || 1) + 'px'"
+              [disabled]="!component.properties?.enabled">
+        <mat-icon *ngIf="component.properties?.icon">{{ component.properties.icon }}</mat-icon>
+        {{ component.properties?.text || 'Outlined Button' }}
+      </button>
+
+      <!-- IconButton -->
+      <button *ngSwitchCase="'iconbutton'" class="widget-button icon-button"
+              [style.color]="component.properties?.color || '#2196F3'"
+              [disabled]="!component.properties?.enabled">
+        <mat-icon [style.font-size]="(component.properties?.iconSize || 24) + 'px'">
+          {{ component.properties?.icon || 'favorite' }}
+        </mat-icon>
+      </button>
+
+      <!-- FloatingActionButton -->
+      <button *ngSwitchCase="'floatingactionbutton'" class="widget-button fab-button"
+              [class.mini]="component.properties?.mini"
+              [style.background-color]="component.properties?.backgroundColor || '#2196F3'"
+              [style.color]="component.properties?.foregroundColor || '#FFFFFF'"
+              [disabled]="!component.properties?.enabled">
+        <mat-icon>{{ component.properties?.icon || 'add' }}</mat-icon>
+        <span *ngIf="component.properties?.extended" class="fab-label">
+          {{ component.properties?.label || 'FAB' }}
+        </span>
+      </button>
+
+      <!-- NAVIGATION WIDGETS -->
+
+      <!-- AppBar -->
+      <div *ngSwitchCase="'appbar'" class="widget-appbar"
+           [style.background-color]="component.properties?.backgroundColor || '#2196F3'"
+           [style.color]="component.properties?.foregroundColor || '#FFFFFF'">
+        <mat-icon *ngIf="component.properties?.showLeading !== false">
+          {{ component.properties?.leadingIcon || 'menu' }}
+        </mat-icon>
+        <span class="appbar-title" [style.text-align]="component.properties?.centerTitle ? 'center' : 'left'">
+          {{ component.properties?.title || 'App Bar' }}
+        </span>
+        <div class="appbar-spacer"></div>
+        <div class="appbar-actions">
+          <mat-icon>search</mat-icon>
+          <mat-icon>more_vert</mat-icon>
+        </div>
+      </div>
+
+      <!-- BottomNavigationBar -->
+      <div *ngSwitchCase="'bottomnavigationbar'" class="widget-bottom-nav"
+           [style.background-color]="component.properties?.backgroundColor || '#FFFFFF'">
+        <div class="nav-item"
+             *ngFor="let item of (component.properties?.items || [{icon: 'home', label: 'Home'}, {icon: 'search', label: 'Search'}, {icon: 'person', label: 'Profile'}]); let i = index"
+             [class.selected]="i === component.properties?.currentIndex"
+             [style.color]="i === component.properties?.currentIndex ? (component.properties?.selectedItemColor || '#2196F3') : (component.properties?.unselectedItemColor || '#757575')">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+        </div>
+      </div>
+
+      <!-- ListTile -->
+      <div *ngSwitchCase="'listtile'" class="widget-listtile"
+           [class.selected]="component.properties?.selected"
+           [style.background-color]="component.properties?.selected ? (component.properties?.selectedTileColor || '#E3F2FD') : 'transparent'">
+        <mat-icon class="listtile-leading" *ngIf="component.properties?.leadingIcon">
+          {{ component.properties.leadingIcon }}
+        </mat-icon>
+        <div class="listtile-text">
+          <div class="listtile-title">{{ component.properties?.title || 'List Item' }}</div>
+          <div class="listtile-subtitle" *ngIf="component.properties?.subtitle">
+            {{ component.properties.subtitle }}
+          </div>
+        </div>
+        <mat-icon class="listtile-trailing" *ngIf="component.properties?.trailingIcon">
+          {{ component.properties.trailingIcon }}
+        </mat-icon>
+      </div>
+
+      <!-- DEFAULT: Unknown widget type -->
+      <div *ngSwitchDefault class="widget-unknown">
+        <div class="unknown-content">
           <mat-icon>widgets</mat-icon>
           <span>{{ component.type }}</span>
+          <small>Unknown widget type</small>
         </div>
-      </ng-container>
+      </div>
 
     </div>
   </div>

@@ -265,3 +265,95 @@
     }
   }
 }
+
+// Property Tabs
+.property-tabs {
+  height: calc(100% - 120px);
+
+  ::ng-deep {
+    .mat-mdc-tab-header {
+      .mat-mdc-tab {
+        min-width: 80px;
+
+        .tab-icon {
+          margin-right: 4px;
+          font-size: 16px;
+        }
+      }
+    }
+
+    .mat-mdc-tab-body-wrapper {
+      height: calc(100% - 48px);
+      overflow-y: auto;
+    }
+  }
+
+  .tab-content {
+    padding: 16px;
+  }
+}
+
+// Icon Picker
+.icon-field {
+  .icon-input-field {
+    width: 100%;
+  }
+}
+
+.icon-picker-menu {
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    padding: 8px;
+    max-width: 400px;
+    max-height: 300px;
+    overflow-y: auto;
+
+    button {
+      &.selected {
+        background: rgba(33, 150, 243, 0.1);
+        color: #2196F3;
+      }
+    }
+  }
+}
+
+// Spacing Editors
+.spacing-editor {
+  .spacing-mode-toggle {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  .spacing-inputs {
+    display: grid;
+    gap: 8px;
+
+    &.individual {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    mat-form-field {
+      width: 100%;
+    }
+  }
+}
+
+// Alignment Grid
+.alignment-field {
+  .alignment-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    width: 120px;
+    margin-top: 8px;
+
+    button {
+      &.selected {
+        background: rgba(33, 150, 243, 0.1);
+        color: #2196F3;
+      }
+    }
+  }
+}

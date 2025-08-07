@@ -1,4 +1,4 @@
-// src/app/app.config.ts
+// src/app/app.config.ts - UPDATED
 
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
@@ -21,6 +21,9 @@ import { ApiService } from './shared/services/api.service';
 import { AuthService } from './shared/services/auth.service';
 import { ConfigService } from './shared/services/config.service';
 import { TranslationService } from './shared/services/translation.service';
+
+// Builder Services - INCLUDING NEW WIDGET REGISTRY
+import { WidgetRegistryService } from './builder/services/widget-registry.service';
 import { WidgetLibraryService } from './builder/services/widget-library.service';
 import { UiBuilderService } from './builder/services/ui-builder.service';
 import { FlutterProjectService } from './builder/services/flutter-project.service';
@@ -58,6 +61,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSliderModule } from '@angular/material/slider';
 
 // Angular CDK
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -93,7 +97,8 @@ export const appConfig: ApplicationConfig = {
     ConfigService,
     TranslationService,
 
-    // Builder Services
+    // Builder Services - IMPORTANT: WidgetRegistryService must be before WidgetLibraryService
+    WidgetRegistryService,  // NEW: Central widget registry
     WidgetLibraryService,
     UiBuilderService,
     FlutterProjectService,
@@ -131,6 +136,7 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(MatGridListModule),
     importProvidersFrom(MatCardModule),
     importProvidersFrom(MatButtonToggleModule),
+    importProvidersFrom(MatSliderModule),  // IMPORTANT: Added for slider properties
 
     // Angular CDK Modules
     importProvidersFrom(DragDropModule),

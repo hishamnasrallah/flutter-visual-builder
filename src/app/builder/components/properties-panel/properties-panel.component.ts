@@ -1,9 +1,9 @@
-// src/app/builder/components/properties-panel/properties-panel.component.ts
+// src/app/builder/components/properties-panel/properties-panel.component.ts - DYNAMIC VERSION
 
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
 
 // Angular Material
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,202 +14,87 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FormsModule } from '@angular/forms'; // Add FormsModule for ngModel
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTabsModule } from '@angular/material/tabs';
+import { FormsModule } from '@angular/forms';
 
 // Services and Models
 import { UiBuilderService, SelectedElement } from '../../services/ui-builder.service';
-import { UIComponent } from '../../../shared/models';
-
-interface PropertyConfig {
-  key: string;
-  label: string;
-  type: 'text' | 'number' | 'color' | 'select' | 'boolean' | 'slider' | 'textarea';
-  options?: Array<{ value: any; label: string }>;
-  min?: number;
-  max?: number;
-  step?: number;
-}
+import { WidgetRegistryService, WidgetPropertySchema } from '../../services/widget-registry.service';
+import { WidgetLibraryService } from '../../services/widget-library.service';
+import { UIComponent, ComponentTemplate } from '../../../shared/models';
 
 @Component({
   selector: 'app-properties-panel',
   standalone: true,
-imports: [
-  CommonModule,
-  ReactiveFormsModule,
-  FormsModule,
-  MatFormFieldModule,
-  MatInputModule,
-  MatSelectModule,
-  MatCheckboxModule,
-  MatSliderModule,
-  MatButtonModule,
-  MatIconModule,
-  MatTooltipModule
-],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatCheckboxModule,
+    MatSliderModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatExpansionModule,
+    MatTabsModule
+  ],
   templateUrl: './properties-panel.component.html',
   styleUrls: ['./properties-panel.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PropertiesPanelComponent implements OnInit, OnDestroy {
-  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   selectedElement: SelectedElement | null = null;
+  currentWidget: ComponentTemplate | null = null;
   propertiesForm: FormGroup;
-  propertyConfigs: PropertyConfig[] = [];
+  propertySchemas: WidgetPropertySchema[] = [];
   isUpdating = false;
 
-  // Common property configurations
-  private commonProperties: { [key: string]: PropertyConfig[] } = {
-    text: [
-      { key: 'text', label: 'Text', type: 'textarea' },
-      { key: 'fontSize', label: 'Font Size', type: 'slider', min: 8, max: 72, step: 1 },
-      { key: 'color', label: 'Text Color', type: 'color' },
-      {
-        key: 'fontWeight',
-        label: 'Font Weight',
-        type: 'select',
-        options: [
-          { value: 'normal', label: 'Normal' },
-          { value: 'bold', label: 'Bold' },
-          { value: 'w100', label: 'Thin' },
-          { value: 'w300', label: 'Light' },
-          { value: 'w500', label: 'Medium' },
-          { value: 'w700', label: 'Bold' },
-          { value: 'w900', label: 'Black' }
-        ]
-      },
-      {
-        key: 'textAlign',
-        label: 'Text Align',
-        type: 'select',
-        options: [
-          { value: 'left', label: 'Left' },
-          { value: 'center', label: 'Center' },
-          { value: 'right', label: 'Right' },
-          { value: 'justify', label: 'Justify' }
-        ]
-      },
-      { key: 'maxLines', label: 'Max Lines', type: 'number', min: 1 }
-    ],
-    container: [
-      { key: 'width', label: 'Width', type: 'number', min: 0 },
-      { key: 'height', label: 'Height', type: 'number', min: 0 },
-      { key: 'color', label: 'Background Color', type: 'color' },
-      { key: 'padding', label: 'Padding', type: 'number', min: 0 },
-      { key: 'margin', label: 'Margin', type: 'number', min: 0 },
-      {
-        key: 'alignment',
-        label: 'Alignment',
-        type: 'select',
-        options: [
-          { value: 'topLeft', label: 'Top Left' },
-          { value: 'topCenter', label: 'Top Center' },
-          { value: 'topRight', label: 'Top Right' },
-          { value: 'centerLeft', label: 'Center Left' },
-          { value: 'center', label: 'Center' },
-          { value: 'centerRight', label: 'Center Right' },
-          { value: 'bottomLeft', label: 'Bottom Left' },
-          { value: 'bottomCenter', label: 'Bottom Center' },
-          { value: 'bottomRight', label: 'Bottom Right' }
-        ]
-      }
-    ],
-    column: [
-      {
-        key: 'mainAxisAlignment',
-        label: 'Main Axis Alignment',
-        type: 'select',
-        options: [
-          { value: 'start', label: 'Start' },
-          { value: 'center', label: 'Center' },
-          { value: 'end', label: 'End' },
-          { value: 'spaceBetween', label: 'Space Between' },
-          { value: 'spaceAround', label: 'Space Around' },
-          { value: 'spaceEvenly', label: 'Space Evenly' }
-        ]
-      },
-      {
-        key: 'crossAxisAlignment',
-        label: 'Cross Axis Alignment',
-        type: 'select',
-        options: [
-          { value: 'start', label: 'Start' },
-          { value: 'center', label: 'Center' },
-          { value: 'end', label: 'End' },
-          { value: 'stretch', label: 'Stretch' }
-        ]
-      }
-    ],
-    row: [
-      {
-        key: 'mainAxisAlignment',
-        label: 'Main Axis Alignment',
-        type: 'select',
-        options: [
-          { value: 'start', label: 'Start' },
-          { value: 'center', label: 'Center' },
-          { value: 'end', label: 'End' },
-          { value: 'spaceBetween', label: 'Space Between' },
-          { value: 'spaceAround', label: 'Space Around' },
-          { value: 'spaceEvenly', label: 'Space Evenly' }
-        ]
-      },
-      {
-        key: 'crossAxisAlignment',
-        label: 'Cross Axis Alignment',
-        type: 'select',
-        options: [
-          { value: 'start', label: 'Start' },
-          { value: 'center', label: 'Center' },
-          { value: 'end', label: 'End' },
-          { value: 'stretch', label: 'Stretch' }
-        ]
-      }
-    ],
-    button: [
-      { key: 'text', label: 'Button Text', type: 'text' },
-      {
-        key: 'style',
-        label: 'Button Style',
-        type: 'select',
-        options: [
-          { value: 'elevated', label: 'Elevated' },
-          { value: 'filled', label: 'Filled' },
-          { value: 'outlined', label: 'Outlined' },
-          { value: 'text', label: 'Text' }
-        ]
-      }
-    ],
-    icon: [
-      { key: 'icon', label: 'Icon Name', type: 'text' },
-      { key: 'size', label: 'Icon Size', type: 'slider', min: 12, max: 96, step: 2 },
-      { key: 'color', label: 'Icon Color', type: 'color' }
-    ],
-    image: [
-      { key: 'source', label: 'Image URL', type: 'text' },
-      { key: 'width', label: 'Width', type: 'number', min: 0 },
-      { key: 'height', label: 'Height', type: 'number', min: 0 },
-      {
-        key: 'fit',
-        label: 'Image Fit',
-        type: 'select',
-        options: [
-          { value: 'cover', label: 'Cover' },
-          { value: 'contain', label: 'Contain' },
-          { value: 'fill', label: 'Fill' },
-          { value: 'fitWidth', label: 'Fit Width' },
-          { value: 'fitHeight', label: 'Fit Height' },
-          { value: 'none', label: 'None' }
-        ]
-      },
-      { key: 'alt', label: 'Alt Text', type: 'text' }
-    ]
-  };
+  // Categorized properties for tabs
+  basicProperties: WidgetPropertySchema[] = [];
+  styleProperties: WidgetPropertySchema[] = [];
+  layoutProperties: WidgetPropertySchema[] = [];
+  advancedProperties: WidgetPropertySchema[] = [];
+
+  // Special property editors
+  paddingExpanded = false;
+  marginExpanded = false;
+  alignmentOptions = [
+    { value: 'topLeft', label: 'Top Left', icon: 'north_west' },
+    { value: 'topCenter', label: 'Top Center', icon: 'north' },
+    { value: 'topRight', label: 'Top Right', icon: 'north_east' },
+    { value: 'centerLeft', label: 'Center Left', icon: 'west' },
+    { value: 'center', label: 'Center', icon: 'center_focus_strong' },
+    { value: 'centerRight', label: 'Center Right', icon: 'east' },
+    { value: 'bottomLeft', label: 'Bottom Left', icon: 'south_west' },
+    { value: 'bottomCenter', label: 'Bottom Center', icon: 'south' },
+    { value: 'bottomRight', label: 'Bottom Right', icon: 'south_east' }
+  ];
+
+  // Common Material icons for icon picker
+  commonIcons = [
+    'home', 'star', 'favorite', 'settings', 'search', 'menu', 'close', 'add', 'remove',
+    'edit', 'delete', 'save', 'share', 'person', 'email', 'phone', 'location_on',
+    'calendar_today', 'shopping_cart', 'visibility', 'visibility_off', 'lock', 'lock_open',
+    'check', 'check_circle', 'cancel', 'info', 'warning', 'error', 'help',
+    'arrow_back', 'arrow_forward', 'arrow_upward', 'arrow_downward', 'refresh',
+    'more_vert', 'more_horiz', 'fullscreen', 'fullscreen_exit', 'zoom_in', 'zoom_out',
+    'filter_list', 'sort', 'attach_file', 'cloud', 'cloud_upload', 'cloud_download',
+    'folder', 'folder_open', 'create_new_folder', 'insert_drive_file', 'description',
+    'notifications', 'notifications_off', 'send', 'drafts', 'inbox', 'mail',
+    'reply', 'forward', 'archive', 'unarchive', 'label', 'bookmark', 'bookmark_border'
+  ];
 
   constructor(
     private fb: FormBuilder,
     private uiBuilderService: UiBuilderService,
+    private widgetRegistry: WidgetRegistryService,
+    private widgetLibrary: WidgetLibraryService,
     private cdr: ChangeDetectorRef
   ) {
     this.propertiesForm = this.fb.group({});
@@ -218,9 +103,21 @@ export class PropertiesPanelComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Subscribe to selected element changes
     this.uiBuilderService.selectedElement$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(selected => {
-        this.selectedElement = selected;
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(selected => {
+          this.selectedElement = selected;
+
+          if (selected) {
+            // Get widget definition from backend through widget library
+            const normalizedType = this.widgetRegistry.normalizeWidgetType(selected.component.type);
+            return this.widgetLibrary.getWidgetByType(normalizedType);
+          }
+          return of(null);
+        })
+      )
+      .subscribe(widget => {
+        this.currentWidget = widget || null;
         this.setupPropertiesForm();
         this.cdr.markForCheck();
       });
@@ -243,40 +140,59 @@ export class PropertiesPanelComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-  // Add this method to the PropertiesPanelComponent class
-  formatSliderValue(value: number): string {
-    return value.toString();
-  }
+
   private setupPropertiesForm(): void {
     this.isUpdating = true;
 
-    if (!this.selectedElement) {
-      this.propertyConfigs = [];
+    if (!this.selectedElement || !this.currentWidget) {
+      this.propertySchemas = [];
+      this.categorizeProperties();
       this.propertiesForm = this.fb.group({});
       this.isUpdating = false;
       return;
     }
 
     const component = this.selectedElement.component;
-    const widgetType = component.type.toLowerCase();
 
-    // Get property configs for this widget type
-    this.propertyConfigs = this.getPropertyConfigs(widgetType);
+    // Generate property schemas dynamically from backend widget
+    this.propertySchemas = this.widgetRegistry.generatePropertySchemas(this.currentWidget);
+    this.categorizeProperties();
 
     // Build form controls
     const formControls: { [key: string]: any } = {};
 
-    this.propertyConfigs.forEach(config => {
-      let value = this.getPropertyValue(component.properties, config.key);
+    this.propertySchemas.forEach(schema => {
+      let value = this.getPropertyValue(component.properties, schema.key);
 
-      // Handle special cases
-      if (config.key === 'padding' || config.key === 'margin') {
-        if (typeof value === 'object' && value?.all !== undefined) {
-          value = value.all;
-        }
+      // Transform value for UI if needed
+      value = this.widgetRegistry.transformPropertyForUI(this.currentWidget!, schema.key, value);
+
+      // Use default value if undefined
+      if (value === undefined || value === null) {
+        value = schema.defaultValue;
       }
 
-      formControls[config.key] = [value || this.getDefaultValue(config)];
+      formControls[schema.key] = [value];
+
+      // Special handling for padding/margin
+      if (schema.type === 'padding' || schema.type === 'margin') {
+        const objValue = typeof value === 'object' ? value : { all: value || 0 };
+
+        if ('all' in objValue) {
+          formControls[`${schema.key}_all`] = [objValue.all || 0];
+          formControls[`${schema.key}_mode`] = ['all'];
+        } else if ('horizontal' in objValue && 'vertical' in objValue) {
+          formControls[`${schema.key}_horizontal`] = [objValue.horizontal || 0];
+          formControls[`${schema.key}_vertical`] = [objValue.vertical || 0];
+          formControls[`${schema.key}_mode`] = ['axis'];
+        } else {
+          formControls[`${schema.key}_top`] = [objValue.top || 0];
+          formControls[`${schema.key}_right`] = [objValue.right || 0];
+          formControls[`${schema.key}_bottom`] = [objValue.bottom || 0];
+          formControls[`${schema.key}_left`] = [objValue.left || 0];
+          formControls[`${schema.key}_mode`] = ['individual'];
+        }
+      }
     });
 
     this.propertiesForm = this.fb.group(formControls);
@@ -286,106 +202,192 @@ export class PropertiesPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  private getPropertyConfigs(widgetType: string): PropertyConfig[] {
-    return this.commonProperties[widgetType] || [];
+  private categorizeProperties(): void {
+    this.basicProperties = this.propertySchemas.filter(p => !p.category || p.category === 'basic');
+    this.styleProperties = this.propertySchemas.filter(p => p.category === 'style');
+    this.layoutProperties = this.propertySchemas.filter(p => p.category === 'layout');
+    this.advancedProperties = this.propertySchemas.filter(p => p.category === 'advanced');
   }
 
   private getPropertyValue(properties: any, key: string): any {
-  const value = properties[key];
-
-  // Handle nested object properties like padding.all
-  if (key === 'padding' || key === 'margin') {
-    if (typeof value === 'object' && value?.all !== undefined) {
-      return value.all;
-    }
-    return value;
+    return properties[key];
   }
-
-  return value;
-}
-
-private getDefaultValue(config: PropertyConfig): any {
-  switch (config.type) {
-    case 'boolean':
-      return false;
-    case 'number':
-    case 'slider':
-      return config.min || 0;
-    case 'select':
-      return config.options?.[0]?.value || '';
-    case 'color':
-      return '#000000';
-    default:
-      return '';
-  }
-}
 
   private updateElementProperties(formValues: any): void {
-  if (!this.selectedElement) return;
+    if (!this.selectedElement || !this.currentWidget) return;
 
-  const updates: { [key: string]: any } = {};
+    const updates: { [key: string]: any } = {};
 
-  Object.keys(formValues).forEach(key => {
-    const config = this.propertyConfigs.find(c => c.key === key);
-    let value = formValues[key];
+    this.propertySchemas.forEach(schema => {
+      let value = formValues[schema.key];
 
-    if (!config) return;
+      // Handle special property types
+      if (schema.type === 'padding' || schema.type === 'margin') {
+        const mode = formValues[`${schema.key}_mode`];
 
-    // Handle special transformations
-    if (config.key === 'padding' || config.key === 'margin') {
-      if (typeof value === 'number' && value >= 0) {
-        value = { all: value };
-      } else {
-        return; // Skip invalid padding/margin values
+        if (mode === 'all') {
+          value = { all: formValues[`${schema.key}_all`] || 0 };
+        } else if (mode === 'axis') {
+          value = {
+            horizontal: formValues[`${schema.key}_horizontal`] || 0,
+            vertical: formValues[`${schema.key}_vertical`] || 0
+          };
+        } else if (mode === 'individual') {
+          value = {
+            top: formValues[`${schema.key}_top`] || 0,
+            right: formValues[`${schema.key}_right`] || 0,
+            bottom: formValues[`${schema.key}_bottom`] || 0,
+            left: formValues[`${schema.key}_left`] || 0
+          };
+        }
       }
-    }
 
-    // Handle color values
-    if (config.type === 'color') {
-      if (!value || (!value.startsWith('#') && !value.toLowerCase().startsWith('rgb'))) {
-        return; // Skip invalid colors
+      // Transform value from UI if needed
+      value = this.widgetRegistry.transformPropertyFromUI(this.currentWidget!, schema.key, value);
+
+      // Validate and include the value
+      if (value !== undefined) {
+        updates[schema.key] = value;
       }
-    }
+    });
 
-    // Include the value (don't skip empty strings for some properties like text)
-    if (value !== null && value !== undefined) {
-      if (config.type === 'text' || value !== '') {
-        updates[key] = value;
-      }
+    if (Object.keys(updates).length > 0) {
+      this.uiBuilderService.updateWidgetProperties(this.selectedElement.path, updates);
     }
-  });
-
-  if (Object.keys(updates).length > 0) {
-    // Update the element properties
-    this.uiBuilderService.updateWidgetProperties(this.selectedElement.path, updates);
   }
-}
 
   // Reset properties to default
   resetProperties(): void {
-    if (!this.selectedElement) return;
-
-    const defaultProperties: { [key: string]: any } = {};
-
-    this.propertyConfigs.forEach(config => {
-      defaultProperties[config.key] = this.getDefaultValue(config);
-    });
+    if (!this.selectedElement || !this.currentWidget) return;
 
     this.isUpdating = true;
-    this.propertiesForm.patchValue(defaultProperties);
+
+    const defaultValues: { [key: string]: any } = {};
+    this.propertySchemas.forEach(schema => {
+      defaultValues[schema.key] = schema.defaultValue;
+
+      // Handle special types
+      if (schema.type === 'padding' || schema.type === 'margin') {
+        const value = schema.defaultValue || { all: 0 };
+        if ('all' in value) {
+          defaultValues[`${schema.key}_all`] = value.all;
+          defaultValues[`${schema.key}_mode`] = 'all';
+        }
+      }
+    });
+
+    this.propertiesForm.patchValue(defaultValues);
     this.isUpdating = false;
+
+    // Update widget with defaults from backend
+    this.uiBuilderService.updateWidgetProperties(
+      this.selectedElement.path,
+      this.currentWidget.default_properties
+    );
   }
 
   // Get display name for selected element
   getElementDisplayName(): string {
-    if (!this.selectedElement) return '';
+    if (!this.currentWidget) {
+      return this.selectedElement?.component.type || '';
+    }
+    return this.currentWidget.name;
+  }
 
-    const type = this.selectedElement.component.type;
-    return type.charAt(0).toUpperCase() + type.slice(1);
+  getElementIcon(): string {
+    if (!this.currentWidget) {
+      return 'widgets';
+    }
+    return this.currentWidget.icon;
+  }
+
+  // Helper methods for template
+  formatSliderValue(value: number): string {
+    return value.toString();
+  }
+
+  onPaddingModeChange(mode: string): void {
+    const currentPadding = this.propertiesForm.value;
+    this.isUpdating = true;
+
+    if (mode === 'all') {
+      const value = currentPadding.padding_top || currentPadding.padding_all || 0;
+      this.propertiesForm.patchValue({
+        padding_all: value,
+        padding_mode: 'all'
+      });
+    } else if (mode === 'axis') {
+      this.propertiesForm.patchValue({
+        padding_horizontal: currentPadding.padding_left || 0,
+        padding_vertical: currentPadding.padding_top || 0,
+        padding_mode: 'axis'
+      });
+    } else {
+      this.propertiesForm.patchValue({
+        padding_top: currentPadding.padding_all || 0,
+        padding_right: currentPadding.padding_all || 0,
+        padding_bottom: currentPadding.padding_all || 0,
+        padding_left: currentPadding.padding_all || 0,
+        padding_mode: 'individual'
+      });
+    }
+
+    this.isUpdating = false;
+  }
+
+  onMarginModeChange(mode: string): void {
+    const currentMargin = this.propertiesForm.value;
+    this.isUpdating = true;
+
+    if (mode === 'all') {
+      const value = currentMargin.margin_top || currentMargin.margin_all || 0;
+      this.propertiesForm.patchValue({
+        margin_all: value,
+        margin_mode: 'all'
+      });
+    } else if (mode === 'axis') {
+      this.propertiesForm.patchValue({
+        margin_horizontal: currentMargin.margin_left || 0,
+        margin_vertical: currentMargin.margin_top || 0,
+        margin_mode: 'axis'
+      });
+    } else {
+      this.propertiesForm.patchValue({
+        margin_top: currentMargin.margin_all || 0,
+        margin_right: currentMargin.margin_all || 0,
+        margin_bottom: currentMargin.margin_all || 0,
+        margin_left: currentMargin.margin_all || 0,
+        margin_mode: 'individual'
+      });
+    }
+
+    this.isUpdating = false;
+  }
+
+  selectIcon(icon: string, propertyKey: string): void {
+    this.propertiesForm.patchValue({ [propertyKey]: icon });
+  }
+
+  selectAlignment(alignment: string, propertyKey: string): void {
+    this.propertiesForm.patchValue({ [propertyKey]: alignment });
+  }
+
+  hasProperties(): boolean {
+    return this.propertySchemas.length > 0;
+  }
+
+  hasCategoryProperties(category: 'basic' | 'style' | 'layout' | 'advanced'): boolean {
+    switch (category) {
+      case 'basic': return this.basicProperties.length > 0;
+      case 'style': return this.styleProperties.length > 0;
+      case 'layout': return this.layoutProperties.length > 0;
+      case 'advanced': return this.advancedProperties.length > 0;
+      default: return false;
+    }
   }
 
   // Track function for ngFor
-  trackPropertyConfig(index: number, config: PropertyConfig): string {
-    return config.key;
+  trackPropertySchema(index: number, schema: WidgetPropertySchema): string {
+    return schema.key;
   }
 }
