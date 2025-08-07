@@ -221,8 +221,7 @@
     <!-- Main Content Area -->
     <mat-sidenav-container class="sidenav-container" [hasBackdrop]="data.isHandset">
 
-      <!-- Mobile Drawer -->
-      <mat-sidenav
+            <mat-sidenav
         #drawer
         class="sidenav"
         fixedInViewport
@@ -230,7 +229,7 @@
         [mode]="data.isHandset ? 'over' : 'side'"
         [opened]="!data.isHandset && isAuthenticated">
 
-        <!-- Widget Toolbox -->
+        <!-- Widget Toolbox - Only render here for both mobile and desktop -->
         <div class="drawer-content" *ngIf="isAuthenticated">
           <app-widget-toolbox></app-widget-toolbox>
         </div>
@@ -245,13 +244,11 @@
           <!-- Desktop Layout -->
           <div class="desktop-layout" *ngIf="!data.isHandset">
 
-            <!-- Left Sidebar (Widget Toolbox) -->
-            <div class="left-sidebar" [class.collapsed]="!drawer?.opened">
-              <app-widget-toolbox></app-widget-toolbox>
-            </div>
+            <!-- Remove the left-sidebar div completely since drawer handles it -->
 
             <!-- Center Area -->
             <div class="center-area">
+
 
               <!-- Secondary Toolbar -->
               <div class="secondary-toolbar" *ngIf="currentProject">

@@ -100,14 +100,38 @@ export class UiBuilderService {
   // Widget Operations
   addWidget(widget: UIComponent, targetPath: number[] = []): boolean {
     const currentStructure = this.getUIStructure();
-    const success = this.insertWidgetAtPath(currentStructure, widget, targetPath);
 
-    if (success) {
+    // If target path is empty, add to root
+    if (targetPath.length === 0) {
+      const target = currentStructure;
+      if (!target.children) {
+        target.children = [];
+      }
+      target.children.push(_.cloneDeep(widget));
       this.setUIStructure(currentStructure);
-      this.selectElement(widget, [...targetPath, this.getChildrenCount(currentStructure, targetPath) - 1]);
+
+      // Select the newly added widget
+      const newPath = [target.children.length - 1];
+      this.selectElement(widget, newPath);
+      return true;
     }
 
-    return success;
+    // Add to specific path
+    const parent = this.getComponentAtPath(currentStructure, targetPath);
+    if (parent) {
+      if (!parent.children) {
+        parent.children = [];
+      }
+      parent.children.push(_.cloneDeep(widget));
+      this.setUIStructure(currentStructure);
+
+      // Select the newly added widget
+      const newPath = [...targetPath, parent.children.length - 1];
+      this.selectElement(widget, newPath);
+      return true;
+    }
+
+    return false;
   }
 
   removeWidget(path: number[]): boolean {
@@ -117,7 +141,7 @@ export class UiBuilderService {
     const parentPath = path.slice(0, -1);
     const index = path[path.length - 1];
 
-    const parent = this.getComponentAtPath(currentStructure, parentPath);
+    const parent = parentPath.length === 0 ? currentStructure : this.getComponentAtPath(currentStructure, parentPath);
     if (parent && parent.children && index < parent.children.length) {
       parent.children.splice(index, 1);
       this.setUIStructure(currentStructure);
@@ -130,7 +154,7 @@ export class UiBuilderService {
 
   updateWidgetProperties(path: number[], properties: { [key: string]: any }): boolean {
     const currentStructure = this.getUIStructure();
-    const component = this.getComponentAtPath(currentStructure, path);
+    const component = path.length === 0 ? currentStructure : this.getComponentAtPath(currentStructure, path);
 
     if (component) {
       component.properties = { ...component.properties, ...properties };
@@ -149,6 +173,9 @@ export class UiBuilderService {
     const widget = this.getComponentAtPath(currentStructure, fromPath);
     if (!widget) return false;
 
+    // Clone the widget before removing
+    const widgetCopy = _.cloneDeep(widget);
+
     // Remove from old location
     if (!this.removeWidgetAtPath(currentStructure, fromPath)) return false;
 
@@ -156,26 +183,60 @@ export class UiBuilderService {
     const adjustedToPath = this.adjustPathAfterRemoval(fromPath, toPath);
 
     // Insert at new location
-    if (this.insertWidgetAtPath(currentStructure, widget, adjustedToPath)) {
+    if (this.insertWidgetAtPath(currentStructure, widgetCopy, adjustedToPath)) {
       this.setUIStructure(currentStructure);
-      this.selectElement(widget, adjustedToPath);
+      this.selectElement(widgetCopy, adjustedToPath);
       return true;
     }
 
     return false;
   }
 
+  // NEW METHOD: Reorder widgets within the same parent
+  reorderWidget(parentPath: number[], fromIndex: number, toIndex: number): boolean {
+    const currentStructure = this.getUIStructure();
+    const parent = parentPath.length === 0 ? currentStructure : this.getComponentAtPath(currentStructure, parentPath);
+
+    if (!parent || !parent.children || fromIndex >= parent.children.length) {
+      return false;
+    }
+
+    // Reorder children
+    const [removed] = parent.children.splice(fromIndex, 1);
+    parent.children.splice(toIndex, 0, removed);
+
+    this.setUIStructure(currentStructure);
+
+    // Update selection to new position
+    const newPath = [...parentPath, toIndex];
+    this.selectElement(removed, newPath);
+
+    return true;
+  }
+
   duplicateWidget(path: number[]): boolean {
     const currentStructure = this.getUIStructure();
-    const widget = this.getComponentAtPath(currentStructure, path);
+    const widget = path.length === 0 ? currentStructure : this.getComponentAtPath(currentStructure, path);
 
     if (widget) {
       const duplicatedWidget = _.cloneDeep(widget);
+
+      if (path.length === 0) {
+        // Can't duplicate root
+        return false;
+      }
+
       const parentPath = path.slice(0, -1);
       const index = path[path.length - 1] + 1;
+      const parent = parentPath.length === 0 ? currentStructure : this.getComponentAtPath(currentStructure, parentPath);
 
-      if (this.insertWidgetAtPath(currentStructure, duplicatedWidget, [...parentPath, index])) {
+      if (parent && parent.children) {
+        parent.children.splice(index, 0, duplicatedWidget);
         this.setUIStructure(currentStructure);
+
+        // Select the duplicated widget
+        const newPath = [...parentPath, index];
+        this.selectElement(duplicatedWidget, newPath);
         return true;
       }
     }
@@ -226,14 +287,17 @@ export class UiBuilderService {
 
   private insertWidgetAtPath(structure: UIComponent, widget: UIComponent, path: number[]): boolean {
     if (path.length === 0) {
-      // Replace root
-      Object.assign(structure, widget);
+      // Add to root's children
+      if (!structure.children) {
+        structure.children = [];
+      }
+      structure.children.push(_.cloneDeep(widget));
       return true;
     }
 
     const parentPath = path.slice(0, -1);
     const index = path[path.length - 1];
-    const parent = this.getComponentAtPath(structure, parentPath);
+    const parent = parentPath.length === 0 ? structure : this.getComponentAtPath(structure, parentPath);
 
     if (parent) {
       if (!parent.children) {
@@ -255,7 +319,7 @@ export class UiBuilderService {
 
     const parentPath = path.slice(0, -1);
     const index = path[path.length - 1];
-    const parent = this.getComponentAtPath(structure, parentPath);
+    const parent = parentPath.length === 0 ? structure : this.getComponentAtPath(structure, parentPath);
 
     if (parent && parent.children && index < parent.children.length) {
       parent.children.splice(index, 1);
@@ -266,26 +330,26 @@ export class UiBuilderService {
   }
 
   private getChildrenCount(structure: UIComponent, path: number[]): number {
-    const component = this.getComponentAtPath(structure, path);
+    const component = path.length === 0 ? structure : this.getComponentAtPath(structure, path);
     return component?.children?.length || 0;
   }
 
   private adjustPathAfterRemoval(fromPath: number[], toPath: number[]): number[] {
-  // If moving within the same parent
-  if (fromPath.length === toPath.length &&
-      fromPath.slice(0, -1).every((val, i) => val === toPath[i])) {
+    // If moving within the same parent
+    if (fromPath.length === toPath.length &&
+        fromPath.slice(0, -1).every((val, i) => val === toPath[i])) {
 
-    const fromIndex = fromPath[fromPath.length - 1];
-    const toIndex = toPath[toPath.length - 1];
+      const fromIndex = fromPath[fromPath.length - 1];
+      const toIndex = toPath[toPath.length - 1];
 
-    // If moving to a position after the original, adjust for the removal
-    if (toIndex > fromIndex) {
-      return [...toPath.slice(0, -1), toIndex - 1];
+      // If moving to a position after the original, adjust for the removal
+      if (toIndex > fromIndex) {
+        return [...toPath.slice(0, -1), toIndex - 1];
+      }
     }
-  }
 
-  return toPath;
-}
+    return toPath;
+  }
 
   private pushToHistory(structure: UIComponent): void {
     // Remove any history beyond current index
@@ -304,36 +368,45 @@ export class UiBuilderService {
 
   // Validation
   canDropWidget(targetPath: number[], widgetType: string): boolean {
-  const currentStructure = this.getUIStructure();
-  const target = this.getComponentAtPath(currentStructure, targetPath);
+    const currentStructure = this.getUIStructure();
+    const target = targetPath.length === 0 ? currentStructure : this.getComponentAtPath(currentStructure, targetPath);
 
-  if (!target) return false;
+    if (!target) return false;
 
-  // Check if target can have children
-  const targetCanHaveChildren = this.widgetCanHaveChildren(target.type);
-  if (!targetCanHaveChildren) return false;
+    // Check if target can have children
+    const targetCanHaveChildren = this.widgetCanHaveChildren(target.type);
+    if (!targetCanHaveChildren) return false;
 
-  // Check max children constraint
-  const maxChildren = this.getMaxChildren(target.type);
-  if (maxChildren !== null && target.children && target.children.length >= maxChildren) {
-    return false;
+    // Check max children constraint
+    const maxChildren = this.getMaxChildren(target.type);
+    if (maxChildren !== null && target.children && target.children.length >= maxChildren) {
+      return false;
+    }
+
+    // Additional validation for specific widget types
+    if (target.type === 'center' && target.children && target.children.length > 0) {
+      return false; // Center can only have one child
+    }
+
+    return true;
   }
-
-  // Additional validation for specific widget types
-  if (target.type === 'center' && target.children && target.children.length > 0) {
-    return false; // Center can only have one child
-  }
-
-  return true;
-}
 
   private widgetCanHaveChildren(widgetType: string): boolean {
-    const containerTypes = ['container', 'column', 'row', 'stack', 'center', 'padding', 'card'];
+    const containerTypes = [
+      'container', 'column', 'row', 'stack', 'center', 'padding', 'card',
+      'scaffold', 'listview', 'gridview', 'wrap', 'expanded', 'flexible',
+      'sizedbox', 'align', 'positioned'
+    ];
     return containerTypes.includes(widgetType.toLowerCase());
   }
 
   private getMaxChildren(widgetType: string): number | null {
-    const singleChildTypes = ['container', 'center', 'padding', 'card'];
-    return singleChildTypes.includes(widgetType.toLowerCase()) ? 1 : null;
+    const singleChildTypes = ['center', 'padding', 'align', 'expanded', 'flexible'];
+    if (singleChildTypes.includes(widgetType.toLowerCase())) {
+      return 1;
+    }
+
+    // Scaffold has specific child slots but we'll allow multiple for simplicity
+    return null;
   }
 }

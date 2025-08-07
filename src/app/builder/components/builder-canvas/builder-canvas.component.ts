@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 // Angular CDK
-import { CdkDragDrop, CdkDragEnter, CdkDragExit, DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, CdkDragEnter, CdkDragExit, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 // Services and Models
 import { UiBuilderService, SelectedElement } from '../../services/ui-builder.service';
@@ -31,14 +31,11 @@ import { UIComponent } from '../../../shared/models';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BuilderCanvasComponent implements OnInit, OnDestroy {
-  // ... rest of your existing component logic stays the same
   private destroy$ = new Subject<void>();
 
   uiStructure: UIComponent | null = null;
   selectedElement: SelectedElement | null = null;
   draggedElement: UIComponent | null = null;
-
-  // Drop zone state
   dropTargetPath: number[] = [];
   isDropTarget = false;
 
@@ -96,34 +93,36 @@ export class BuilderCanvasComponent implements OnInit, OnDestroy {
     // Could open inline editing or properties panel
   }
 
-  // Drop Events
+  // Simplified Drop Events
   onDrop(event: CdkDragDrop<any>, targetPath: number[] = []): void {
-  if (this.draggedElement) {
-    // Adding new widget from toolbox
-    this.uiBuilderService.addWidget(this.draggedElement, targetPath);
-    this.uiBuilderService.setDraggedElement(null);
-  } else if (event.previousContainer !== event.container) {
-    // Moving widget between containers
-    const dragData = event.item.data;
-    if (dragData && dragData.component && dragData.path) {
-      this.uiBuilderService.moveWidget(dragData.path, targetPath);
+    // Handle new widget from toolbox
+    if (this.draggedElement) {
+      this.uiBuilderService.addWidget(this.draggedElement, targetPath);
+      this.uiBuilderService.setDraggedElement(null);
+      this.clearDropTarget();
+      return;
     }
-  } else {
-    // Reordering within same container
+
+    // Handle moving existing widget
     const dragData = event.item.data;
     if (dragData && dragData.component && dragData.path) {
-      // Calculate new position based on current index
-      const newPath = [...targetPath, event.currentIndex];
-      const oldPath = [...targetPath, event.previousIndex];
+      // Simple reordering within same container
+      if (event.previousContainer === event.container) {
+        const parentPath = targetPath;
+        const fromIndex = event.previousIndex;
+        const toIndex = event.currentIndex;
 
-      if (event.currentIndex !== event.previousIndex) {
-        this.uiBuilderService.moveWidget(oldPath, newPath);
+        if (fromIndex !== toIndex) {
+          this.uiBuilderService.reorderWidget(parentPath, fromIndex, toIndex);
+        }
+      } else {
+        // Moving between containers
+        this.uiBuilderService.moveWidget(dragData.path, targetPath);
       }
     }
-  }
 
-  this.clearDropTarget();
-}
+    this.clearDropTarget();
+  }
 
   onDragEnter(event: CdkDragEnter, targetPath: number[]): void {
     if (this.canDropAtPath(targetPath)) {
@@ -144,10 +143,25 @@ export class BuilderCanvasComponent implements OnInit, OnDestroy {
   }
 
   private canDropAtPath(path: number[]): boolean {
-    const draggedWidget = this.draggedElement;
-    if (!draggedWidget) return false;
+    // Allow drop on any container type
+    const component = this.getComponentAtPath(path);
+    if (!component) return false;
 
-    return this.uiBuilderService.canDropWidget(path, draggedWidget.type);
+    const containerTypes = ['container', 'column', 'row', 'stack', 'scaffold', 'card', 'wrap', 'listview', 'gridview'];
+    return containerTypes.includes(component.type.toLowerCase());
+  }
+
+  private getComponentAtPath(path: number[]): UIComponent | null {
+    if (!this.uiStructure) return null;
+
+    let current = this.uiStructure;
+    for (const index of path) {
+      if (!current.children || index >= current.children.length) {
+        return null;
+      }
+      current = current.children[index];
+    }
+    return current;
   }
 
   // Delete element
@@ -173,76 +187,173 @@ export class BuilderCanvasComponent implements OnInit, OnDestroy {
   }
 
   getElementStyles(component: UIComponent): { [key: string]: string } {
-  const styles: { [key: string]: string } = {};
-  const props = component.properties;
+    const styles: { [key: string]: string } = {};
+    const props = component.properties || {};
 
-  // Apply width and height
-  if (props['width']) {
-    styles['width'] = props['width'] + 'px';
-  }
-  if (props['height']) {
-    styles['height'] = props['height'] + 'px';
-  }
-
-  // Apply background color
-  if (props['color']) {
-    styles['background-color'] = props['color'];
-  }
-
-  // Apply padding
-  if (props['padding']) {
-    if (typeof props['padding'] === 'object' && props['padding'].all) {
-      styles['padding'] = props['padding'].all + 'px';
+    // Width and Height
+    if (props.width) {
+      styles['width'] = typeof props.width === 'number' ? `${props.width}px` : props.width;
     }
-  }
-
-  // Apply margin
-  if (props['margin']) {
-    if (typeof props['margin'] === 'object' && props['margin'].all) {
-      styles['margin'] = props['margin'].all + 'px';
+    if (props.height) {
+      styles['height'] = typeof props.height === 'number' ? `${props.height}px` : props.height;
     }
-  }
 
-  return styles;
-}
+    // Background
+    if (props.color || props.backgroundColor) {
+      styles['background-color'] = props.color || props.backgroundColor;
+    }
+
+    // Padding
+    if (props.padding) {
+      if (typeof props.padding === 'object') {
+        if (props.padding.all) {
+          styles['padding'] = `${props.padding.all}px`;
+        } else {
+          const top = props.padding.top || 0;
+          const right = props.padding.right || 0;
+          const bottom = props.padding.bottom || 0;
+          const left = props.padding.left || 0;
+          styles['padding'] = `${top}px ${right}px ${bottom}px ${left}px`;
+        }
+      } else if (typeof props.padding === 'number') {
+        styles['padding'] = `${props.padding}px`;
+      }
+    }
+
+    // Margin
+    if (props.margin) {
+      if (typeof props.margin === 'object') {
+        if (props.margin.all) {
+          styles['margin'] = `${props.margin.all}px`;
+        } else {
+          const top = props.margin.top || 0;
+          const right = props.margin.right || 0;
+          const bottom = props.margin.bottom || 0;
+          const left = props.margin.left || 0;
+          styles['margin'] = `${top}px ${right}px ${bottom}px ${left}px`;
+        }
+      } else if (typeof props.margin === 'number') {
+        styles['margin'] = `${props.margin}px`;
+      }
+    }
+
+    // Border Radius
+    if (props.borderRadius) {
+      styles['border-radius'] = typeof props.borderRadius === 'number' ?
+        `${props.borderRadius}px` : props.borderRadius;
+    }
+
+    // Border
+    if (props.borderWidth || props.borderColor) {
+      const width = props.borderWidth || 1;
+      const color = props.borderColor || '#ddd';
+      styles['border'] = `${width}px solid ${color}`;
+    }
+
+    // Flexbox properties for Row/Column
+    if (component.type === 'row') {
+      styles['display'] = 'flex';
+      styles['flex-direction'] = 'row';
+
+      if (props.mainAxisAlignment) {
+        const alignMap: any = {
+          'start': 'flex-start',
+          'end': 'flex-end',
+          'center': 'center',
+          'spaceBetween': 'space-between',
+          'spaceAround': 'space-around',
+          'spaceEvenly': 'space-evenly'
+        };
+        styles['justify-content'] = alignMap[props.mainAxisAlignment] || 'flex-start';
+      }
+
+      if (props.crossAxisAlignment) {
+        const alignMap: any = {
+          'start': 'flex-start',
+          'end': 'flex-end',
+          'center': 'center',
+          'stretch': 'stretch'
+        };
+        styles['align-items'] = alignMap[props.crossAxisAlignment] || 'flex-start';
+      }
+    }
+
+    if (component.type === 'column') {
+      styles['display'] = 'flex';
+      styles['flex-direction'] = 'column';
+
+      if (props.mainAxisAlignment) {
+        const alignMap: any = {
+          'start': 'flex-start',
+          'end': 'flex-end',
+          'center': 'center',
+          'spaceBetween': 'space-between',
+          'spaceAround': 'space-around',
+          'spaceEvenly': 'space-evenly'
+        };
+        styles['justify-content'] = alignMap[props.mainAxisAlignment] || 'flex-start';
+      }
+
+      if (props.crossAxisAlignment) {
+        const alignMap: any = {
+          'start': 'flex-start',
+          'end': 'flex-end',
+          'center': 'center',
+          'stretch': 'stretch'
+        };
+        styles['align-items'] = alignMap[props.crossAxisAlignment] || 'flex-start';
+      }
+    }
+
+    return styles;
+  }
 
   getElementClasses(component: UIComponent, path: number[]): string[] {
-  const classes = ['canvas-element', `canvas-${component.type}`];
+    const classes = ['canvas-element', `canvas-${component.type}`];
 
-  if (this.isElementSelected(path)) {
-    classes.push('selected');
+    if (this.isElementSelected(path)) {
+      classes.push('selected');
+    }
+
+    if (this.isDropTargetAtPath(path)) {
+      classes.push('drop-target');
+    }
+
+    return classes;
   }
-
-  if (this.isDropTargetAtPath(path)) {
-    classes.push('drop-target');
-  }
-
-  // Add hover class for better UX
-  if (component.type === 'container' && (!component.children || component.children.length === 0)) {
-    classes.push('empty-container');
-  }
-
-  return classes;
-}
 
   getDisplayText(component: UIComponent): string {
-  const props = component.properties;
+    const props = component.properties || {};
 
-  if (props['text']) {
-    return props['text'];
+    if (props.text) {
+      return props.text;
+    }
+
+    if (props.label) {
+      return props.label;
+    }
+
+    // Default text for specific widget types
+    const defaultTexts: any = {
+      'text': 'Text Widget',
+      'button': 'Button',
+      'elevatedbutton': 'Elevated Button',
+      'textbutton': 'Text Button',
+      'outlinedbutton': 'Outlined Button',
+      'iconbutton': '',
+      'floatingactionbutton': '',
+      'textfield': '',
+      'appbar': 'App Bar',
+      'listtile': 'List Item'
+    };
+
+    return defaultTexts[component.type.toLowerCase()] || '';
   }
 
-  switch (component.type.toLowerCase()) {
-    case 'text':
-      return props['text'] || 'Text';
-    case 'button':
-      return props['text'] || 'Button';
-    case 'container':
-      return component.children?.length ? '' : 'Container';
-    default:
-      return component.type;
+  getIconName(component: UIComponent): string {
+    const props = component.properties || {};
+    return props.icon || props.iconName || 'star';
   }
-}
 
   private arraysEqual(a: number[], b: number[]): boolean {
     if (a.length !== b.length) return false;

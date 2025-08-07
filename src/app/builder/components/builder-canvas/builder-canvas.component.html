@@ -4,7 +4,6 @@
      (click)="onCanvasClick($event)"
      cdkDropList
      [cdkDropListData]="{path: []}"
-     cdkDropListSortingDisabled="false"
      (cdkDropListDropped)="onDrop($event)"
      (cdkDropListEntered)="onDragEnter($event, [])"
      (cdkDropListExited)="onDragExit($event)">
@@ -21,17 +20,11 @@
     </ng-container>
 
     <!-- Empty State -->
-    <div class="empty-canvas" *ngIf="!uiStructure || !uiStructure.children?.length">
+    <div class="empty-canvas" *ngIf="!uiStructure || (!uiStructure.children?.length && uiStructure.type === 'container')">
       <div class="empty-content">
         <mat-icon class="empty-icon">widgets</mat-icon>
         <h3>Start Building Your App</h3>
         <p>Drag widgets from the toolbox to begin designing your screen</p>
-        <div class="empty-actions">
-          <button mat-stroked-button>
-            <mat-icon>help</mat-icon>
-            View Tutorial
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -54,7 +47,6 @@
     [ngClass]="getElementClasses(component, path)"
     [ngStyle]="getElementStyles(component)"
     (click)="onElementClick(component, path, $event)"
-    (dblclick)="onElementDoubleClick(component, path, $event)"
     cdkDrag
     [cdkDragData]="{component: component, path: path}"
     cdkDropList
@@ -64,7 +56,7 @@
     (cdkDropListExited)="onDragExit($event)">
 
     <!-- Element Controls (visible when selected) -->
-    <div class="element-controls" *ngIf="isElementSelected(path)">
+    <div class="element-controls" *ngIf="isElementSelected(path) && path.length > 0">
       <button
         mat-icon-button
         class="control-btn duplicate-btn"
@@ -76,8 +68,7 @@
         mat-icon-button
         class="control-btn delete-btn"
         (click)="onDeleteElement(path, $event)"
-        matTooltip="Delete"
-        *ngIf="path.length > 0">
+        matTooltip="Delete">
         <mat-icon>delete</mat-icon>
       </button>
     </div>
@@ -85,7 +76,27 @@
     <!-- Element Content -->
     <div class="element-content">
 
-      <!-- Container Elements -->
+      <!-- Layout Widgets -->
+
+      <!-- Scaffold -->
+      <ng-container *ngIf="component.type === 'scaffold'">
+        <div class="scaffold-content">
+          <div class="scaffold-appbar" *ngIf="component.properties.showAppBar">
+            <mat-icon>menu</mat-icon>
+            <span>{{ component.properties.title || 'App Bar' }}</span>
+          </div>
+          <div class="scaffold-body">
+            <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+              <ng-container
+                [ngTemplateOutlet]="elementTemplate"
+                [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+              </ng-container>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Container -->
       <ng-container *ngIf="component.type === 'container'">
         <div class="container-content">
           <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
@@ -94,8 +105,6 @@
               [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
             </ng-container>
           </ng-container>
-
-          <!-- Container placeholder -->
           <div class="container-placeholder" *ngIf="!component.children?.length">
             <mat-icon>crop_free</mat-icon>
             <span>Container</span>
@@ -103,7 +112,7 @@
         </div>
       </ng-container>
 
-      <!-- Column Elements -->
+      <!-- Column -->
       <ng-container *ngIf="component.type === 'column'">
         <div class="column-content">
           <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
@@ -112,8 +121,6 @@
               [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
             </ng-container>
           </ng-container>
-
-          <!-- Column placeholder -->
           <div class="column-placeholder" *ngIf="!component.children?.length">
             <mat-icon>view_column</mat-icon>
             <span>Column</span>
@@ -121,7 +128,7 @@
         </div>
       </ng-container>
 
-      <!-- Row Elements -->
+      <!-- Row -->
       <ng-container *ngIf="component.type === 'row'">
         <div class="row-content">
           <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
@@ -130,8 +137,6 @@
               [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
             </ng-container>
           </ng-container>
-
-          <!-- Row placeholder -->
           <div class="row-placeholder" *ngIf="!component.children?.length">
             <mat-icon>view_stream</mat-icon>
             <span>Row</span>
@@ -139,52 +144,263 @@
         </div>
       </ng-container>
 
-      <!-- Text Elements -->
+      <!-- Stack -->
+      <ng-container *ngIf="component.type === 'stack'">
+        <div class="stack-content">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <div class="stack-child" [style.z-index]="i">
+              <ng-container
+                [ngTemplateOutlet]="elementTemplate"
+                [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+              </ng-container>
+            </div>
+          </ng-container>
+          <div class="stack-placeholder" *ngIf="!component.children?.length">
+            <mat-icon>layers</mat-icon>
+            <span>Stack</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Card -->
+      <ng-container *ngIf="component.type === 'card'">
+        <div class="card-content mat-elevation-z2">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <ng-container
+              [ngTemplateOutlet]="elementTemplate"
+              [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+            </ng-container>
+          </ng-container>
+          <div class="card-placeholder" *ngIf="!component.children?.length">
+            <mat-icon>credit_card</mat-icon>
+            <span>Card</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ListView -->
+      <ng-container *ngIf="component.type === 'listview'">
+        <div class="listview-content">
+          <ng-container *ngFor="let child of component.children; let i = index; trackBy: trackChild">
+            <div class="list-item">
+              <ng-container
+                [ngTemplateOutlet]="elementTemplate"
+                [ngTemplateOutletContext]="{component: child, path: path.concat([i])}">
+              </ng-container>
+            </div>
+          </ng-container>
+          <div class="listview-placeholder" *ngIf="!component.children?.length">
+            <mat-icon>list</mat-icon>
+            <span>ListView</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Display Widgets -->
+
+      <!-- Text -->
       <ng-container *ngIf="component.type === 'text'">
         <div class="text-content"
              [ngStyle]="{
                'font-size': component.properties.fontSize ? component.properties.fontSize + 'px' : '16px',
                'color': component.properties.color || '#000000',
                'text-align': component.properties.textAlign || 'left',
-               'font-weight': component.properties.fontWeight || 'normal'
+               'font-weight': component.properties.fontWeight || 'normal',
+               'font-style': component.properties.fontStyle || 'normal',
+               'text-decoration': component.properties.textDecoration || 'none'
              }">
           {{ getDisplayText(component) }}
         </div>
       </ng-container>
 
-      <!-- Button Elements -->
-      <ng-container *ngIf="component.type === 'button'">
-        <button mat-raised-button class="button-content" disabled>
-          {{ getDisplayText(component) }}
-        </button>
-      </ng-container>
-
-      <!-- Icon Elements -->
+      <!-- Icon -->
       <ng-container *ngIf="component.type === 'icon'">
         <mat-icon class="icon-content"
                   [ngStyle]="{
                     'font-size': component.properties.size ? component.properties.size + 'px' : '24px',
                     'color': component.properties.color || '#000000'
                   }">
-          {{ component.properties.icon || 'star' }}
+          {{ getIconName(component) }}
         </mat-icon>
       </ng-container>
 
-      <!-- Image Elements -->
+      <!-- Image -->
       <ng-container *ngIf="component.type === 'image'">
         <div class="image-content">
-          <img [src]="component.properties.source || '/assets/placeholder-image.svg'"
+          <img [src]="component.properties.source || 'assets/placeholder.png'"
                [alt]="component.properties.alt || 'Image'"
                [ngStyle]="{
-                 'width': component.properties.width ? component.properties.width + 'px' : 'auto',
+                 'width': component.properties.width ? component.properties.width + 'px' : '100%',
                  'height': component.properties.height ? component.properties.height + 'px' : 'auto',
                  'object-fit': component.properties.fit || 'cover'
                }">
         </div>
       </ng-container>
 
-      <!-- Generic placeholder for other elements -->
-      <ng-container *ngIf="!['container', 'column', 'row', 'text', 'button', 'icon', 'image'].includes(component.type)">
+      <!-- Divider -->
+      <ng-container *ngIf="component.type === 'divider'">
+        <div class="divider-content"
+             [ngStyle]="{
+               'height': component.properties.thickness ? component.properties.thickness + 'px' : '1px',
+               'background-color': component.properties.color || '#e0e0e0',
+               'margin': component.properties.indent ? '0 ' + component.properties.indent + 'px' : '0'
+             }">
+        </div>
+      </ng-container>
+
+      <!-- Input Widgets -->
+
+      <!-- TextField -->
+      <ng-container *ngIf="component.type === 'textfield'">
+        <div class="textfield-content">
+          <input type="text"
+                 class="mock-textfield"
+                 [placeholder]="component.properties.hintText || 'Enter text'"
+                 [value]="component.properties.text || ''"
+                 disabled>
+        </div>
+      </ng-container>
+
+      <!-- Checkbox -->
+      <ng-container *ngIf="component.type === 'checkbox'">
+        <div class="checkbox-content">
+          <input type="checkbox"
+                 [checked]="component.properties.value"
+                 disabled>
+          <span>{{ component.properties.label || 'Checkbox' }}</span>
+        </div>
+      </ng-container>
+
+      <!-- Switch -->
+      <ng-container *ngIf="component.type === 'switch'">
+        <div class="switch-content">
+          <label class="switch">
+            <input type="checkbox" [checked]="component.properties.value" disabled>
+            <span class="switch-slider"></span>
+          </label>
+          <span>{{ component.properties.label || 'Switch' }}</span>
+        </div>
+      </ng-container>
+
+      <!-- Radio -->
+      <ng-container *ngIf="component.type === 'radio'">
+        <div class="radio-content">
+          <input type="radio"
+                 [checked]="component.properties.value"
+                 disabled>
+          <span>{{ component.properties.label || 'Radio' }}</span>
+        </div>
+      </ng-container>
+
+      <!-- Slider -->
+      <ng-container *ngIf="component.type === 'slider'">
+        <div class="slider-content">
+          <input type="range"
+                 class="mock-slider"
+                 [min]="component.properties.min || 0"
+                 [max]="component.properties.max || 100"
+                 [value]="component.properties.value || 50"
+                 disabled>
+        </div>
+      </ng-container>
+
+      <!-- Button Widgets -->
+
+      <!-- ElevatedButton -->
+      <ng-container *ngIf="component.type === 'elevatedbutton'">
+        <button class="elevated-button mat-elevation-z2" disabled>
+          <mat-icon *ngIf="component.properties.icon">{{ getIconName(component) }}</mat-icon>
+          {{ getDisplayText(component) }}
+        </button>
+      </ng-container>
+
+      <!-- TextButton -->
+      <ng-container *ngIf="component.type === 'textbutton'">
+        <button class="text-button" disabled>
+          <mat-icon *ngIf="component.properties.icon">{{ getIconName(component) }}</mat-icon>
+          {{ getDisplayText(component) }}
+        </button>
+      </ng-container>
+
+      <!-- OutlinedButton -->
+      <ng-container *ngIf="component.type === 'outlinedbutton'">
+        <button class="outlined-button" disabled>
+          <mat-icon *ngIf="component.properties.icon">{{ getIconName(component) }}</mat-icon>
+          {{ getDisplayText(component) }}
+        </button>
+      </ng-container>
+
+      <!-- IconButton -->
+      <ng-container *ngIf="component.type === 'iconbutton'">
+        <button class="icon-button" disabled>
+          <mat-icon>{{ getIconName(component) }}</mat-icon>
+        </button>
+      </ng-container>
+
+      <!-- FloatingActionButton -->
+      <ng-container *ngIf="component.type === 'floatingactionbutton'">
+        <button class="fab-button mat-elevation-z6" disabled>
+          <mat-icon>{{ getIconName(component) }}</mat-icon>
+        </button>
+      </ng-container>
+
+      <!-- Navigation Widgets -->
+
+      <!-- AppBar -->
+      <ng-container *ngIf="component.type === 'appbar'">
+        <div class="appbar-content">
+          <mat-icon>menu</mat-icon>
+          <span class="appbar-title">{{ component.properties.title || 'App Bar' }}</span>
+          <div class="appbar-actions">
+            <mat-icon>search</mat-icon>
+            <mat-icon>more_vert</mat-icon>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- BottomNavigationBar -->
+      <ng-container *ngIf="component.type === 'bottomnavigationbar'">
+        <div class="bottom-nav-content">
+          <div class="nav-item" *ngFor="let item of (component.properties.items || ['Home', 'Search', 'Profile'])">
+            <mat-icon>{{ item.icon || 'home' }}</mat-icon>
+            <span>{{ item.label || item }}</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ListTile -->
+      <ng-container *ngIf="component.type === 'listtile'">
+        <div class="listtile-content">
+          <mat-icon class="listtile-leading" *ngIf="component.properties.leadingIcon">
+            {{ component.properties.leadingIcon }}
+          </mat-icon>
+          <div class="listtile-text">
+            <div class="listtile-title">{{ component.properties.title || 'List Item' }}</div>
+            <div class="listtile-subtitle" *ngIf="component.properties.subtitle">
+              {{ component.properties.subtitle }}
+            </div>
+          </div>
+          <mat-icon class="listtile-trailing" *ngIf="component.properties.trailingIcon">
+            {{ component.properties.trailingIcon }}
+          </mat-icon>
+        </div>
+      </ng-container>
+
+      <!-- Other Widgets -->
+
+      <!-- CircularProgressIndicator -->
+      <ng-container *ngIf="component.type === 'circularprogressindicator'">
+        <div class="progress-content">
+          <div class="circular-progress"></div>
+        </div>
+      </ng-container>
+
+      <!-- Generic placeholder for unknown types -->
+      <ng-container *ngIf="!['scaffold', 'container', 'column', 'row', 'stack', 'card', 'listview',
+                            'text', 'icon', 'image', 'divider',
+                            'textfield', 'checkbox', 'switch', 'radio', 'slider',
+                            'elevatedbutton', 'textbutton', 'outlinedbutton', 'iconbutton', 'floatingactionbutton',
+                            'appbar', 'bottomnavigationbar', 'listtile', 'circularprogressindicator'].includes(component.type)">
         <div class="generic-placeholder">
           <mat-icon>widgets</mat-icon>
           <span>{{ component.type }}</span>
